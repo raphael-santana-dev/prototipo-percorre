@@ -1,301 +1,301 @@
-<div class="w-full relative">
+<div class="w-full relative space-y-6 font-sans">
     
-    <div class="mb-8">
-        <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
-            <i class="ph-fill ph-magic-wand text-purpura-600"></i> Construtor de Formulários
-        </h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-2">Escolha abaixo o tipo de fluxo ou gerencie seus formulários publicados e em rascunho.</p>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 dark:border-gray-800 pb-4">
+        <div>
+            <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+                Construtor de Formulários
+            </h1>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Escolha o tipo de fluxo para criar ou gerencie seus formulários publicados e em rascunho.
+            </p>
+        </div>
+
+        <button type="button" wire:click="criarFormularioAvulsoRascunho" class="px-3.5 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700 rounded-md text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition shrink-0">
+            <i class="ph ph-plus"></i> Novo rascunho livre
+        </button>
     </div>
 
-    <!-- CARDS DE OPÇÕES (3 FLUXOS OFICIAIS) -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    {{-- 3 FLUXOS DE CRIAÇÃO (NEUTROS E DIRETOS) --}}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         
-        <!-- 1. PROCESSO SELETIVO (Inscrição Oficial) -->
-        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 flex flex-col transition hover:shadow-md hover:-translate-y-1 relative group cursor-pointer" wire:click="$set('modalCicloAberto', true)">
-            <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 mb-4">
-                <i class="ph-bold ph-calendar-check text-xl"></i>
+        <button type="button" wire:click="$set('modalCicloAberto', true)" class="text-left bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600 p-5 flex flex-col transition group">
+            <div class="flex items-center justify-between w-full mb-2">
+                <span class="text-sm font-semibold text-gray-900 dark:text-white">Inscrição Oficial</span>
+                <i class="ph ph-calendar-check text-lg text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200"></i>
             </div>
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Inscrição Oficial</h3>
-            <p class="text-xs text-gray-500 leading-relaxed mb-4 flex-1">
-                Vinculado a um Ciclo Seletivo (Regular ou Projeto). Gera ranqueamento, pontuação e ficha oficial de inscrição.
+            <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4 flex-1">
+                Vinculado a um Ciclo Seletivo (Regular ou Projeto), com pontuação, ranking e ficha oficial.
             </p>
-            <span class="text-xs font-bold text-indigo-600 group-hover:underline">Configurar Ciclo →</span>
-        </div>
+            <span class="text-xs font-semibold text-purpura-600 dark:text-purpura-400 group-hover:underline">Selecionar ciclo →</span>
+        </button>
 
-        <!-- 2. AVALIAÇÃO DE APRENDIZAGEM -->
-        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 flex flex-col transition hover:shadow-md hover:-translate-y-1 relative group cursor-pointer" wire:click="$set('modalAprendizagemAberto', true)">
-            <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600 mb-4">
-                <i class="ph-bold ph-graduation-cap text-xl"></i>
+        <button type="button" wire:click="$set('modalAprendizagemAberto', true)" class="text-left bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600 p-5 flex flex-col transition group">
+            <div class="flex items-center justify-between w-full mb-2">
+                <span class="text-sm font-semibold text-gray-900 dark:text-white">Avaliação de Aprendizagem</span>
+                <i class="ph ph-graduation-cap text-lg text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200"></i>
             </div>
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Avaliação de Aprendizagem</h3>
-            <p class="text-xs text-gray-500 leading-relaxed mb-4 flex-1">
-                Formulários vinculados a um Workflow de Aprendizagem (permite múltiplos ativos ou criar em rascunho).
+            <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4 flex-1">
+                Formulários vinculados a ciclos e fases do fluxo de Aprendizagem, ou salvos em rascunho.
             </p>
-            <span class="text-xs font-bold text-orange-600 group-hover:underline">Criar Avaliação →</span>
-        </div>
+            <span class="text-xs font-semibold text-purpura-600 dark:text-purpura-400 group-hover:underline">Criar avaliação →</span>
+        </button>
 
-        <!-- 3. FORMULÁRIO GERAL -->
-        <a href="{{ route('formularios.create') }}" class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 flex flex-col transition hover:shadow-md hover:-translate-y-1 relative group">
-            <div class="w-12 h-12 bg-purpura-100 rounded-xl flex items-center justify-center text-purpura-600 mb-4">
-                <i class="ph-bold ph-list-dashes text-xl"></i>
+        <a href="{{ route('formularios.create') }}" class="text-left bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600 p-5 flex flex-col transition group">
+            <div class="flex items-center justify-between w-full mb-2">
+                <span class="text-sm font-semibold text-gray-900 dark:text-white">Formulário Geral</span>
+                <i class="ph ph-list-dashes text-lg text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200"></i>
             </div>
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Formulário Geral</h3>
-            <p class="text-xs text-gray-500 leading-relaxed mb-4 flex-1">
-                Pesquisas, questionários públicos (/f/slug) ou modelos em rascunho para vincular depois.
+            <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4 flex-1">
+                Pesquisas, questionários públicos (/f/slug) ou modelos livres para vincular depois.
             </p>
-            <span class="text-xs font-bold text-purpura-600 group-hover:underline">Criar Formulário →</span>
+            <span class="text-xs font-semibold text-purpura-600 dark:text-purpura-400 group-hover:underline">Criar formulário →</span>
         </a>
 
     </div>
 
-    <!-- LISTAGEM DE FORMULÁRIOS POR ABA (PUBLICADOS VS RASCUNHOS) -->
-    <div class="mt-10 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-        <div class="px-6 pt-4 border-b border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-4 bg-gray-50/50 dark:bg-gray-800/40">
-            <div class="flex items-center gap-2">
-                <button type="button" 
-                        wire:click="$set('abaStatus', 'ativos')" 
-                        class="px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 {{ $abaStatus === 'ativos' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-gray-200' }}">
-                    <i class="ph-fill ph-check-circle text-base"></i> Formulários Publicados
-                </button>
+    {{-- LISTAGEM DE FORMULÁRIOS POR ABA --}}
+    <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div class="px-4 sm:px-5 border-b border-gray-200 dark:border-gray-800 flex items-center gap-4 overflow-x-auto">
+            <button type="button" 
+                    wire:click="$set('abaStatus', 'ativos')" 
+                    class="py-3 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap {{ $abaStatus === 'ativos' ? 'border-purpura-600 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-gray-200' }}">
+                Formulários Publicados
+            </button>
 
-                <button type="button" 
-                        wire:click="$set('abaStatus', 'rascunhos')" 
-                        class="px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 {{ $abaStatus === 'rascunhos' ? 'border-amber-500 text-amber-600 dark:text-amber-400' : 'border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-gray-200' }}">
-                    <i class="ph-fill ph-file-dashed text-base"></i> Rascunhos / Modelos Sem Vínculo
-                </button>
-            </div>
-
-            <button type="button" wire:click="criarFormularioAvulsoRascunho" class="mb-2 px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
-                <i class="ph-bold ph-plus"></i> Criar Rascunho Livre (Sem Ciclo)
+            <button type="button" 
+                    wire:click="$set('abaStatus', 'rascunhos')" 
+                    class="py-3 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap {{ $abaStatus === 'rascunhos' ? 'border-purpura-600 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-gray-200' }}">
+                Rascunhos / Sem Vínculo
             </button>
         </div>
 
         <div class="divide-y divide-gray-100 dark:divide-gray-800">
             @forelse($formulariosList ?? [] as $formItem)
-                <div wire:key="hub-form-{{ $formItem->id }}" class="p-4 sm:px-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition">
-                    <div class="space-y-1">
+                <div wire:key="hub-form-{{ $formItem->id }}" class="p-4 sm:px-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition">
+                    <div class="space-y-1 min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
-                            <a href="{{ route('formularios.show', $formItem->id) }}" class="font-bold text-sm text-gray-900 hover:text-purpura-600 dark:text-white">
+                            <a href="{{ route('formularios.show', $formItem->id) }}" class="font-semibold text-sm text-gray-900 hover:text-purpura-600 dark:text-white truncate">
                                 {{ $formItem->titulo }}
                             </a>
-                            <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded border {{ $formItem->is_rascunho ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200' }}">
+                            <span class="px-2 py-0.5 text-[11px] font-medium rounded border {{ $formItem->is_rascunho ? 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700' : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800' }}">
                                 {{ $formItem->is_rascunho ? 'Rascunho' : 'Publicado' }}
                             </span>
-                            <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                            <span class="text-[11px] text-gray-500 dark:text-gray-400">
                                 {{ $formItem->tipo === 'aprendizagem' ? 'Aprendizagem' : 'Formulário Público' }}
                             </span>
                         </div>
-                        <p class="text-xs text-gray-500">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
                             @if($formItem->tipo === 'aprendizagem')
-                                Vínculo: <strong>{{ $formItem->faseAprendizagem?->ciclo?->nome ? $formItem->faseAprendizagem->ciclo->nome . ' — ' . $formItem->faseAprendizagem->nome : 'Sem Ciclo/Fase vinculado' }}</strong>
+                                Vínculo: <span class="text-gray-700 dark:text-gray-300 font-medium">{{ $formItem->faseAprendizagem?->ciclo?->nome ? $formItem->faseAprendizagem->ciclo->nome . ' — ' . $formItem->faseAprendizagem->nome : 'Sem vínculo' }}</span>
                             @else
-                                Link Público: <a href="{{ url('/f/' . $formItem->slug) }}" target="_blank" class="font-mono text-purpura-600 hover:underline">/f/{{ $formItem->slug }}</a>
+                                <a href="{{ url('/f/' . $formItem->slug) }}" target="_blank" class="font-mono text-gray-700 dark:text-gray-300 hover:text-purpura-600 hover:underline">/f/{{ $formItem->slug }}</a>
                                 @if($formItem->cicloSeletivo)
-                                    &middot; Ciclo: <strong>{{ $formItem->cicloSeletivo->nome }}</strong>
+                                    · Ciclo: <span class="text-gray-700 dark:text-gray-300 font-medium">{{ $formItem->cicloSeletivo->nome }}</span>
                                 @endif
                             @endif
-                            &middot; {{ $formItem->campos_count ?? 0 }} bloco(s)
+                            · {{ $formItem->campos_count ?? 0 }} bloco(s)
                         </p>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    <div class="flex flex-wrap items-center gap-1.5 shrink-0">
                         @if(auth()->user()->hasAnyRole(['dev', 'admin']) || auth()->user()->can('formulario.testar') || auth()->user()->can('inscricao.criar'))
-                            <a href="{{ url('/f/' . $formItem->slug . '?modo=teste') }}" target="_blank" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold flex items-center gap-1 transition" title="Testar preenchimento em Sandbox">
-                                <i class="ph-fill ph-flask"></i> Testar
+                            <a href="{{ url('/f/' . $formItem->slug . '?modo=teste') }}" target="_blank" class="px-2.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-md text-xs font-medium transition" title="Testar em Sandbox">
+                                Testar
                             </a>
                         @endif
 
-                        <a href="{{ route('formularios.show', $formItem->id) }}" class="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-xs font-bold flex items-center gap-1 transition" title="Ver Respostas">
-                            <i class="ph-bold ph-files"></i> Respostas
+                        <a href="{{ route('formularios.show', $formItem->id) }}" class="px-2.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-md text-xs font-medium transition">
+                            Respostas
                         </a>
 
-                        <button type="button" wire:click="abrirModalVincular({{ $formItem->id }})" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold flex items-center gap-1 transition">
-                            <i class="ph-bold ph-link"></i> Vincular Destino
+                        <button type="button" wire:click="abrirModalVincular({{ $formItem->id }})" class="px-2.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-md text-xs font-medium transition">
+                            Vincular
                         </button>
 
-                        <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $formItem->id]) }}" class="px-3 py-1.5 bg-purpura-50 hover:bg-purpura-100 text-purpura-700 border border-purpura-200 rounded-lg text-xs font-bold flex items-center gap-1 transition">
-                            <i class="ph-bold ph-pencil-simple"></i> Construtor
+                        <a href="{{ route('formularios.edit', $formItem->id) }}" class="px-2.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-md text-xs font-medium transition" title="Configurações">
+                            <i class="ph ph-gear text-sm align-middle"></i>
                         </a>
 
-                        <a href="{{ route('formularios.edit', $formItem->id) }}" class="px-2.5 py-1.5 bg-white hover:bg-gray-50 text-gray-600 border border-gray-200 rounded-lg text-xs font-bold flex items-center gap-1 transition" title="Configurações de Acesso e Datas">
-                            <i class="ph-bold ph-gear"></i>
-                        </a>
-
-                        <button type="button" wire:click="alternarStatusRascunho({{ $formItem->id }})" class="px-3 py-1.5 rounded-lg text-xs font-bold border transition {{ $formItem->is_rascunho ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600' : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-300' }}">
-                            {{ $formItem->is_rascunho ? 'Publicar' : 'Mover p/ Rascunho' }}
+                        <button type="button" wire:click="alternarStatusRascunho({{ $formItem->id }})" class="px-2.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-md text-xs font-medium transition">
+                            {{ $formItem->is_rascunho ? 'Publicar' : 'Despublicar' }}
                         </button>
+
+                        <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $formItem->id]) }}" class="px-3 py-1.5 bg-purpura-600 hover:bg-purpura-700 text-white rounded-md text-xs font-semibold transition">
+                            Construtor
+                        </a>
                     </div>
                 </div>
             @empty
-                <div class="p-8 text-center text-sm text-gray-500">
-                    Nenhum formulário encontrado na aba de <strong>{{ $abaStatus === 'rascunhos' ? 'Rascunhos' : 'Publicados' }}</strong>.
+                <div class="p-8 text-center text-xs text-gray-500">
+                    Nenhum formulário encontrado em <strong>{{ $abaStatus === 'rascunhos' ? 'Rascunhos' : 'Publicados' }}</strong>.
                 </div>
             @endforelse
         </div>
     </div>
 
-    <!-- Modal 1: INSCRIÇÃO OFICIAL (Ciclo Seletivo) -->
+    {{-- MODAL 1: SELECIONAR CICLO SELETIVO --}}
     @if($modalCicloAberto)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" @click.outside="$wire.set('modalCicloAberto', false)">
-                <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h3 class="font-bold text-gray-900 text-sm">Selecione o Ciclo Seletivo</h3>
-                    <button wire:click="$set('modalCicloAberto', false)" class="text-gray-400 hover:text-red-500"><i class="ph-bold ph-x text-lg"></i></button>
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 w-full max-w-md overflow-hidden flex flex-col max-h-[85vh]" @click.outside="$wire.set('modalCicloAberto', false)">
+                <div class="px-5 py-3.5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center shrink-0">
+                    <h3 class="font-semibold text-gray-900 dark:text-white text-sm">Selecione o Ciclo Seletivo</h3>
+                    <button type="button" wire:click="$set('modalCicloAberto', false)" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1"><i class="ph ph-x text-base"></i></button>
                 </div>
-                <div class="p-2 max-h-80 overflow-y-auto">
+                <div class="divide-y divide-gray-100 dark:divide-gray-800 overflow-y-auto">
                     @forelse($ciclos as $ciclo)
-                        <button wire:click="selecionarCicloSeletivo({{ $ciclo->id }})" class="w-full text-left px-4 py-3 hover:bg-indigo-50 transition border-b border-gray-50 flex justify-between items-center group">
-                            <div>
-                                <div class="font-bold text-sm text-gray-800 group-hover:text-indigo-700 flex items-center gap-2">
-                                    <span>{{ $ciclo->nome }}</span>
+                        <button type="button" wire:click="selecionarCicloSeletivo({{ $ciclo->id }})" class="w-full text-left px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition flex justify-between items-center gap-3">
+                            <div class="min-w-0">
+                                <div class="font-medium text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                                    <span class="truncate">{{ $ciclo->nome }}</span>
                                     @if(($ciclo->tipo_ciclo ?? 'regular') === 'customizado')
-                                        <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase bg-indigo-100 text-indigo-700 rounded">Projeto</span>
+                                        <span class="px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded shrink-0">Projeto</span>
                                     @endif
                                 </div>
-                                <div class="text-[10px] text-gray-500">{{ $ciclo->ano }}.{{ $ciclo->semestre }}</div>
+                                <div class="text-xs text-gray-500 mt-0.5">{{ $ciclo->ano }}.{{ $ciclo->semestre }}</div>
                             </div>
-                            <i class="ph-bold ph-caret-right text-gray-300 group-hover:text-indigo-500"></i>
+                            <i class="ph ph-caret-right text-gray-400 shrink-0"></i>
                         </button>
                     @empty
-                        <div class="p-6 text-center text-sm text-gray-500">Nenhum ciclo cadastrado no sistema.</div>
+                        <div class="p-6 text-center text-xs text-gray-500">Nenhum ciclo cadastrado.</div>
                     @endforelse
                 </div>
             </div>
         </div>
     @endif
 
-    <!-- Modal 2: AVALIAÇÃO DE APRENDIZAGEM -->
+    {{-- MODAL 2: AVALIAÇÃO DE APRENDIZAGEM --}}
     @if($modalAprendizagemAberto)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" @click.outside="$wire.set('modalAprendizagemAberto', false)">
-                <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-orange-50">
-                    <h3 class="font-bold text-orange-900 text-sm flex items-center gap-2"><i class="ph-fill ph-tree-structure"></i> Novo Formulário de Aprendizagem</h3>
-                    <button wire:click="$set('modalAprendizagemAberto', false)" class="text-gray-400 hover:text-red-500"><i class="ph-bold ph-x text-lg"></i></button>
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]" @click.outside="$wire.set('modalAprendizagemAberto', false)">
+                <div class="px-5 py-3.5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center shrink-0">
+                    <h3 class="font-semibold text-gray-900 dark:text-white text-sm">Novo Formulário de Aprendizagem</h3>
+                    <button type="button" wire:click="$set('modalAprendizagemAberto', false)" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1"><i class="ph ph-x text-base"></i></button>
                 </div>
-                <div class="p-5 space-y-4">
+                <div class="p-5 space-y-4 overflow-y-auto">
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Título do Formulário</label>
-                        <input type="text" wire:model="aprendizagem.titulo" placeholder="Ex: Autoavaliação Semestral" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-orange-500">
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Título do formulário</label>
+                        <input type="text" wire:model="aprendizagem.titulo" placeholder="Ex: Autoavaliação Semestral" class="w-full text-sm rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:ring-1 focus:ring-purpura-500 focus:border-purpura-500">
                     </div>
 
-                    <label class="flex items-start gap-2.5 p-3 rounded-lg border border-amber-200 bg-amber-50/60 cursor-pointer">
-                        <input type="checkbox" wire:model.live="aprendizagem.is_rascunho" class="mt-0.5 rounded text-orange-600 focus:ring-orange-500 border-gray-300">
-                        <div class="flex flex-col">
-                            <span class="text-xs font-bold text-amber-900">Criar como Rascunho (Vincular Ciclo/Fase depois)</span>
-                            <span class="text-[10px] text-amber-700">Permite montar as perguntas agora sem escolher a fase.</span>
+                    <label class="flex items-start gap-2.5 p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 cursor-pointer">
+                        <input type="checkbox" wire:model.live="aprendizagem.is_rascunho" class="mt-0.5 rounded text-purpura-600 focus:ring-purpura-500 border-gray-300">
+                        <div class="text-xs">
+                            <span class="font-medium text-gray-900 dark:text-white block">Criar como rascunho</span>
+                            <span class="text-gray-500 dark:text-gray-400">Permite montar as perguntas agora e vincular ciclo/fase depois.</span>
                         </div>
                     </label>
                     
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">1. Escolha o Ciclo de Aprendizagem {{ $aprendizagem['is_rascunho'] ? '(Opcional)' : '*' }}</label>
-                        <select wire:model.live="aprendizagem.ciclo_id" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-orange-500">
-                            <option value="">-- Selecione o Ciclo --</option>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ciclo de Aprendizagem {{ $aprendizagem['is_rascunho'] ? '(opcional)' : '*' }}</label>
+                        <select wire:model.live="aprendizagem.ciclo_id" class="w-full text-sm rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:ring-1 focus:ring-purpura-500 focus:border-purpura-500">
+                            <option value="">Selecione o ciclo...</option>
                             @foreach($ciclosAprendizagem as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
                         </select>
-                        @error('aprendizagem.ciclo_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                        @error('aprendizagem.ciclo_id') <span class="text-xs text-red-600 mt-1 block">{{ $message }}</span> @enderror
                     </div>
 
                     @if($aprendizagem['ciclo_id'])
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">2. Em qual Fase este formulário será preenchido? {{ $aprendizagem['is_rascunho'] ? '(Opcional)' : '*' }}</label>
-                            <select wire:model="aprendizagem.fase_id" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-orange-500">
-                                <option value="">-- Selecione a Fase --</option>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Fase do ciclo {{ $aprendizagem['is_rascunho'] ? '(opcional)' : '*' }}</label>
+                            <select wire:model="aprendizagem.fase_id" class="w-full text-sm rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:ring-1 focus:ring-purpura-500 focus:border-purpura-500">
+                                <option value="">Selecione a fase...</option>
                                 @foreach($fasesAprendizagem as $fase) 
                                     <option value="{{ $fase['id'] }}">{{ $fase['nome'] }}</option> 
                                 @endforeach
                             </select>
-                            @error('aprendizagem.fase_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                            @error('aprendizagem.fase_id') <span class="text-xs text-red-600 mt-1 block">{{ $message }}</span> @enderror
                         </div>
                     @endif
                 </div>
-                <div class="p-4 bg-gray-50 border-t border-gray-100">
-                    <button wire:click="criarFormularioAprendizagem" class="w-full py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg transition shadow-sm text-sm">
-                        Criar e Abrir Construtor
+                <div class="px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2 shrink-0">
+                    <button type="button" wire:click="$set('modalAprendizagemAberto', false)" class="px-3.5 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md">
+                        Cancelar
+                    </button>
+                    <button type="button" wire:click="criarFormularioAprendizagem" class="px-4 py-2 bg-purpura-600 hover:bg-purpura-700 text-white font-semibold rounded-md transition text-xs">
+                        Criar e abrir construtor
                     </button>
                 </div>
             </div>
         </div>
     @endif
 
-    <!-- Modal 3: MODAL UNIVERSAL PARA VINCULAR / CONVERTER DESTINO DO FORMULÁRIO -->
+    {{-- MODAL 3: VINCULAR DESTINO --}}
     @if($modalVincularAberto)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" @click.outside="$wire.set('modalVincularAberto', false)">
-                <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-indigo-50">
-                    <h3 class="font-bold text-indigo-900 text-sm flex items-center gap-2">
-                        <i class="ph-fill ph-link"></i> Vincular Formulário a um Destino
-                    </h3>
-                    <button wire:click="$set('modalVincularAberto', false)" class="text-gray-400 hover:text-red-500"><i class="ph-bold ph-x text-lg"></i></button>
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]" @click.outside="$wire.set('modalVincularAberto', false)">
+                <div class="px-5 py-3.5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center shrink-0">
+                    <h3 class="font-semibold text-gray-900 dark:text-white text-sm">Vincular Formulário a um Destino</h3>
+                    <button type="button" wire:click="$set('modalVincularAberto', false)" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1"><i class="ph ph-x text-base"></i></button>
                 </div>
 
-                <div class="p-5 space-y-4">
+                <div class="p-5 space-y-4 overflow-y-auto">
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Nome / Título do Formulário</label>
-                        <input type="text" wire:model="formVincularTitulo" class="w-full text-sm rounded-lg border-gray-300 font-bold">
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Título do formulário</label>
+                        <input type="text" wire:model="formVincularTitulo" class="w-full text-sm rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Onde este formulário será utilizado? <span class="text-red-500">*</span></label>
-                        <select wire:model.live="destinoVinculo" class="w-full text-sm rounded-lg border-gray-300 font-bold text-purpura-700">
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Destino <span class="text-red-500">*</span></label>
+                        <select wire:model.live="destinoVinculo" class="w-full text-sm rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                             <option value="geral">Formulário Público Geral (/f/slug)</option>
-                            <option value="ciclo_inscricao">Aplicar Campos a um Ciclo de Inscrição Oficial (/inscricao)</option>
+                            <option value="ciclo_inscricao">Aplicar Campos a um Ciclo de Inscrição (/inscricao)</option>
                             <option value="aprendizagem">Vincular a Ciclo / Fase de Aprendizagem</option>
                         </select>
                     </div>
 
                     @if($destinoVinculo === 'ciclo_inscricao')
-                        <div class="p-4 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-3">
-                            <p class="text-xs text-indigo-900 leading-relaxed">
-                                Os blocos, páginas e fases deste formulário serão copiados diretamente para o <strong>Ciclo de Inscrição</strong> selecionado abaixo.
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md space-y-3">
+                            <p class="text-xs text-gray-600 dark:text-gray-300">
+                                Os blocos, páginas e fases serão copiados para o Ciclo de Inscrição selecionado.
                             </p>
                             <div>
-                                <label class="block text-xs font-bold text-gray-800 mb-1">Escolha o Ciclo Seletivo (Regular ou Projeto) *</label>
-                                <select wire:model="vinculoCicloInscricaoId" class="w-full text-sm rounded-lg border-gray-300">
-                                    <option value="">-- Selecione o Ciclo --</option>
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ciclo Seletivo *</label>
+                                <select wire:model="vinculoCicloInscricaoId" class="w-full text-sm rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                                    <option value="">Selecione o ciclo...</option>
                                     @foreach($ciclos as $c)
                                         <option value="{{ $c->id }}">{{ $c->nome }} ({{ ($c->tipo_ciclo ?? 'regular') === 'customizado' ? 'Projeto' : 'Regular' }})</option>
                                     @endforeach
                                 </select>
-                                @error('vinculoCicloInscricaoId') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
+                                @error('vinculoCicloInscricaoId') <span class="text-xs text-red-600 mt-1 block">{{ $message }}</span> @enderror
                             </div>
                             <label class="flex items-start gap-2 cursor-pointer pt-1">
-                                <input type="checkbox" wire:model="substituirCamposCiclo" class="mt-0.5 rounded text-indigo-600 border-gray-300">
-                                <span class="text-xs text-gray-700">Substituir os campos atuais do Ciclo pelos campos deste formulário (se desmarcado, apenas adiciona ao final).</span>
+                                <input type="checkbox" wire:model="substituirCamposCiclo" class="mt-0.5 rounded text-purpura-600 border-gray-300">
+                                <span class="text-xs text-gray-700 dark:text-gray-300">Substituir os campos atuais do ciclo (se desmarcado, apenas adiciona ao final).</span>
                             </label>
                         </div>
 
                     @elseif($destinoVinculo === 'aprendizagem')
-                        <div class="p-4 bg-orange-50/60 border border-orange-200 rounded-xl space-y-3">
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md space-y-3">
                             <div>
-                                <label class="block text-xs font-bold text-gray-800 mb-1">1. Ciclo de Aprendizagem *</label>
-                                <select wire:model.live="vinculoAprendizagemCicloId" class="w-full text-sm rounded-lg border-gray-300">
-                                    <option value="">-- Selecione o Ciclo --</option>
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ciclo de Aprendizagem *</label>
+                                <select wire:model.live="vinculoAprendizagemCicloId" class="w-full text-sm rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                                    <option value="">Selecione o ciclo...</option>
                                     @foreach($ciclosAprendizagem as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
                                 </select>
-                                @error('vinculoAprendizagemCicloId') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
+                                @error('vinculoAprendizagemCicloId') <span class="text-xs text-red-600 mt-1 block">{{ $message }}</span> @enderror
                             </div>
 
                             @if($vinculoAprendizagemCicloId)
                                 <div>
-                                    <label class="block text-xs font-bold text-gray-800 mb-1">2. Fase do Ciclo *</label>
-                                    <select wire:model="vinculoAprendizagemFaseId" class="w-full text-sm rounded-lg border-gray-300">
-                                        <option value="">-- Selecione a Fase --</option>
+                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Fase do Ciclo *</label>
+                                    <select wire:model="vinculoAprendizagemFaseId" class="w-full text-sm rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                                        <option value="">Selecione a fase...</option>
                                         @foreach($fasesVinculoDisponiveis as $fase) <option value="{{ $fase['id'] }}">{{ $fase['nome'] }}</option> @endforeach
                                     </select>
-                                    @error('vinculoAprendizagemFaseId') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
+                                    @error('vinculoAprendizagemFaseId') <span class="text-xs text-red-600 mt-1 block">{{ $message }}</span> @enderror
                                 </div>
                             @endif
                         </div>
 
                     @else
-                        <div class="p-4 bg-purpura-50/50 border border-purpura-200 rounded-xl space-y-3">
-                            <p class="text-xs text-gray-600">
-                                Este formulário responderá na URL pública <strong>/f/{slug}</strong>. Você pode opcionalmente associá-lo a um Ciclo Seletivo para organização:
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md space-y-3">
+                            <p class="text-xs text-gray-600 dark:text-gray-300">
+                                O formulário responderá na URL pública <code class="font-mono">/f/{slug}</code>.
                             </p>
                             <div>
-                                <label class="block text-xs font-bold text-gray-800 mb-1">Ciclo Seletivo Associado (Opcional)</label>
-                                <select wire:model="vinculoCicloInscricaoId" class="w-full text-sm rounded-lg border-gray-300">
-                                    <option value="">-- Nenhum (Formulário Avulso) --</option>
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ciclo Seletivo associado (opcional)</label>
+                                <select wire:model="vinculoCicloInscricaoId" class="w-full text-sm rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                                    <option value="">Nenhum (formulário avulso)</option>
                                     @foreach($ciclos as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
                                 </select>
                             </div>
@@ -303,17 +303,17 @@
                     @endif
 
                     @if($destinoVinculo !== 'ciclo_inscricao')
-                        <label class="flex items-center gap-2.5 pt-2 cursor-pointer">
-                            <input type="checkbox" wire:model="publicarAoVincular" class="rounded text-emerald-600 border-gray-300">
-                            <span class="text-xs font-bold text-gray-800">Publicar e ativar este formulário imediatamente após salvar</span>
+                        <label class="flex items-center gap-2 pt-1 cursor-pointer">
+                            <input type="checkbox" wire:model="publicarAoVincular" class="rounded text-purpura-600 border-gray-300">
+                            <span class="text-xs font-medium text-gray-800 dark:text-gray-200">Publicar e ativar imediatamente após salvar</span>
                         </label>
                     @endif
                 </div>
 
-                <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
-                    <button type="button" wire:click="$set('modalVincularAberto', false)" class="px-4 py-2 text-xs font-bold text-gray-600 bg-white border border-gray-300 rounded-lg">Cancelar</button>
-                    <button type="button" wire:click="salvarVinculoFormulario" class="px-4 py-2 text-xs font-bold text-white bg-purpura-600 hover:bg-purpura-700 rounded-lg shadow-sm">
-                        Confirmar Vínculo
+                <div class="px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2 shrink-0">
+                    <button type="button" wire:click="$set('modalVincularAberto', false)" class="px-3.5 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md">Cancelar</button>
+                    <button type="button" wire:click="salvarVinculoFormulario" class="px-4 py-2 text-xs font-semibold text-white bg-purpura-600 hover:bg-purpura-700 rounded-md transition">
+                        Confirmar vínculo
                     </button>
                 </div>
             </div>

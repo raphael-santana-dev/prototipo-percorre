@@ -1,4 +1,4 @@
-<div class="p-6 max-w-[1400px] mx-auto font-sans">
+<div class="p-4 sm:p-6 max-w-[1400px] mx-auto font-sans">
 
     <x-breadcrumb :items="[
         ['label' => 'Formulários', 'url' => route('formularios.index')],
@@ -108,13 +108,13 @@
 
                                     @elseif($campo->tipo === 'matriz' && is_array($valor))
                                         @php $linhas = $cfg['linhas'] ?? []; @endphp
-                                        <dd class="mt-2 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+                                        <dd class="mt-2 border border-gray-200 dark:border-gray-700 rounded-md overflow-x-auto bg-white dark:bg-gray-800">
                                             <table class="min-w-full text-xs">
                                                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                                     @foreach($linhas as $idx => $linhaTexto)
-                                                        <tr class="{{ $loop->even ? 'bg-gray-50 dark:bg-gray-900/50' : 'bg-white dark:bg-gray-800' }}">
-                                                            <td class="px-4 py-2 text-gray-600 dark:text-gray-400 font-medium w-1/2 border-r border-gray-100 dark:border-gray-700">{{ $linhaTexto }}</td>
-                                                            <td class="px-4 py-2 text-gray-900 dark:text-gray-200 font-bold w-1/2">{{ $valor[$idx] ?? '-' }}</td>
+                                                        <tr class="{{ $loop->even ? 'bg-gray-50 dark:bg-gray-900' : 'bg-white dark:bg-gray-800' }}">
+                                                            <td class="px-3 py-2 text-gray-600 dark:text-gray-400 font-medium border-r border-gray-100 dark:border-gray-700">{{ $linhaTexto }}</td>
+                                                            <td class="px-3 py-2 text-gray-900 dark:text-gray-200 font-semibold">{{ $valor[$idx] ?? '-' }}</td>
                                                         </tr>
                                                     @endforeach
                                                 </tbody>
@@ -151,27 +151,22 @@
         </div>
 
         {{-- COLUNA LATERAL DIREITA: COMPROVANTE / FICHA PDF --}}
-        <div class="lg:col-span-1 space-y-6">
-            <div class="card p-6 space-y-4">
-                <div class="flex items-center gap-3 border-b border-gray-100 dark:border-gray-700 pb-4">
-                    <div class="w-10 h-10 rounded-xl bg-purpura-50 text-purpura-600 flex items-center justify-center text-xl border border-purpura-100">
-                        <i class="ph-fill ph-file-pdf"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-bold text-gray-900 dark:text-white">Comprovante Oficial</h3>
-                        <p class="text-xs text-gray-500">Mesmo documento gerado ao final do preenchimento.</p>
-                    </div>
+        <div class="lg:col-span-1 space-y-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 space-y-4">
+                <div class="border-b border-gray-200 dark:border-gray-700 pb-3">
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Comprovante Oficial</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Mesmo documento gerado ao final do preenchimento.</p>
                 </div>
 
                 <p class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                    Exporte a ficha completa desta resposta em formato PDF (padrão A4 com protocolo, respostas e termo de ciência/assinatura).
+                    Exporte a ficha completa desta resposta em PDF (padrão A4 com protocolo, respostas e assinatura).
                 </p>
 
                 <button type="button"
                         wire:click="baixarFichaRespostaPdf({{ $resposta->id }})"
                         wire:loading.attr="disabled"
-                        class="btn btn--primary btn--medium w-full bg-purpura-600 hover:bg-purpura-700 border-none justify-center">
-                    <i class="ph-bold ph-download-simple text-base"></i> Baixar Ficha de Respostas (PDF)
+                        class="w-full px-4 py-2 bg-purpura-600 hover:bg-purpura-700 text-white text-xs font-semibold rounded-md transition inline-flex items-center justify-center gap-1.5">
+                    <i class="ph ph-download-simple text-sm"></i> Baixar Ficha de Respostas (PDF)
                 </button>
             </div>
         </div>

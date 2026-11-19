@@ -1,48 +1,62 @@
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 font-sans">
     
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Meu Painel</h1>
-        <p class="mt-2 text-slate-600 dark:text-slate-400">Bem-vindo de volta, {{ explode(' ', $student->name)[0] }}! Acompanhe o seu progresso abaixo.</p>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-800 pb-4">
+        <div>
+            <h1 class="text-xl font-bold text-gray-900 dark:text-white">Meu Painel</h1>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Olá, {{ explode(' ', $student->name)[0] }}. Acompanhe sua inscrição, documentos, solicitações e formulários.
+            </p>
+        </div>
+
+        @if($inscricao && $uploadLiberado)
+            <a href="{{ route('student.student.documentos') }}" wire:navigate class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold bg-purpura-600 hover:bg-purpura-700 text-white transition">
+                <i class="ph ph-folder-open text-sm"></i> Enviar Documentação / Laudo
+            </a>
+        @endif
     </div>
 
-    @if($documentosPendentes)
-        <div class="mb-8 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border border-orange-200 dark:border-orange-800/50 p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 rounded-full flex items-center justify-center shrink-0">
-                    <i class="ph-fill ph-warning-circle text-2xl"></i>
-                </div>
+    {{-- ALERTA DE ENVIO DE DOCUMENTOS / LAUDO DISPONÍVEL --}}
+    @if($documentosPendentes && $uploadLiberado)
+        <div class="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-4 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-start gap-3">
+                <i class="ph-fill ph-warning-circle text-xl text-amber-600 shrink-0 mt-0.5"></i>
                 <div>
-                    <h2 class="text-lg font-bold text-orange-900 dark:text-orange-300">Ação Necessária: Envio de Documentos</h2>
-                    <p class="text-sm text-orange-700 dark:text-orange-400 mt-0.5">A sua inscrição requer o envio de documentação para prosseguir. Envie os arquivos de forma segura pelo portal.</p>
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                        Envio de Documentação Liberado
+                    </h2>
+                    <p class="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
+                        Sua inscrição está na etapa de entrega documental. Envie seus documentos obrigatórios e/ou laudo médico pelo portal.
+                    </p>
                 </div>
             </div>
-            <a href="{{ route('student.student.documentos') }}" wire:navigate class="shrink-0 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-sm transition flex items-center gap-2">
-                <i class="ph-bold ph-folder-open"></i> Enviar Documentação
+            <a href="{{ route('student.student.documentos') }}" wire:navigate class="shrink-0 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg transition inline-flex items-center gap-1.5">
+                <i class="ph ph-upload-simple"></i> Enviar Agora
             </a>
         </div>
     @endif
 
+    {{-- AVALIAÇÕES DE APRENDIZAGEM PENDENTES --}}
     @if(count($formulariosPendentes) > 0)
-        <div class="mb-8">
-            <h2 class="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                <i class="ph-fill ph-warning-circle text-orange-500"></i> Avaliações Pendentes
+        <div class="space-y-3">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                Avaliações Pendentes
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 @foreach($formulariosPendentes as $av)
                     @foreach($av->faseAtual->formularios as $form)
-                        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-orange-200 dark:border-orange-800/50 flex flex-col justify-between hover:shadow-md transition">
+                        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-4">
                             <div>
-                                <span class="inline-block px-2.5 py-1 bg-orange-100 text-orange-700 text-[10px] font-bold uppercase tracking-wider rounded-md mb-3">
+                                <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[10px] font-semibold uppercase rounded">
                                     {{ $av->ciclo->nome }}
                                 </span>
-                                <h4 class="text-lg font-bold text-slate-900 dark:text-white">{{ $form->titulo }}</h4>
-                                <p class="text-sm text-slate-500 mt-1"><i class="ph-fill ph-clock"></i> Prazo: {{ $av->data_prazo ? \Carbon\Carbon::parse($av->data_prazo)->format('d/m/Y') : 'Não definido' }}</p>
+                                <h4 class="text-sm font-bold text-gray-900 dark:text-white mt-1.5">{{ $form->titulo }}</h4>
+                                <p class="text-xs text-gray-500 mt-0.5">
+                                    Prazo: {{ $av->data_prazo ? \Carbon\Carbon::parse($av->data_prazo)->format('d/m/Y') : 'Não definido' }}
+                                </p>
                             </div>
-                            <div class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end">
-                                <a href="{{ route('student.formulario-aprendizagem.responder', ['slug' => $form->slug, 'aluno_id' => $student->id]) }}" class="px-5 py-2.5 bg-ponkan-500 hover:bg-ponkan-600 text-white text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-2">
-                                    Responder Agora <i class="ph-bold ph-arrow-right"></i>
-                                </a>
-                            </div>
+                            <a href="{{ route('student.formulario-aprendizagem.responder', ['slug' => $form->slug, 'aluno_id' => $student->id]) }}" class="px-3.5 py-2 bg-purpura-600 hover:bg-purpura-700 text-white text-xs font-semibold rounded-lg transition shrink-0">
+                                Responder
+                            </a>
                         </div>
                     @endforeach
                 @endforeach
@@ -50,185 +64,348 @@
         </div>
     @endif
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        <!-- COLUNA ESQUERDA: Resumos (Inscrição Atual e Solicitação) -->
-        <div class="lg:col-span-2 space-y-6">
+        {{-- COLUNA ESQUERDA (8 COLUNAS): INSCRIÇÃO ATUAL, SOLICITAÇÕES E FORMULÁRIOS GERAIS --}}
+        <div class="lg:col-span-8 space-y-6">
             
-            <!-- Card de Inscrição Atual -->
+            {{-- CARD: INSCRIÇÃO ATUAL --}}
             @if($inscricao)
-                <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700">
-                    <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-lg border border-gray-200 dark:border-gray-700 space-y-5">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700 pb-4">
                         <div>
-                            <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                <i class="ph-fill ph-star text-purpura-500 text-xl"></i> Inscrição em Andamento
-                            </h3>
-                            <p class="text-xs text-slate-500 font-medium mt-1">Registrada em {{ $inscricao->created_at->format('d/m/Y') }}</p>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-sm font-bold text-gray-900 dark:text-white">
+                                    Inscrição Atual (#{{ $inscricao->id }})
+                                </h3>
+                                <span class="text-xs text-gray-400">• {{ $inscricao->ciclo->nome ?? 'Ciclo Atual' }}</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-0.5">
+                                Registrada em {{ $inscricao->created_at->format('d/m/Y \à\s H:i') }}
+                            </p>
                         </div>
-                        @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
-                        <span class="px-3.5 py-1.5 text-[11px] font-bold rounded-full border uppercase tracking-wider w-max shadow-sm" style="background-color: {{ $corHex }}15; color: {{ $corHex }}; border-color: {{ $corHex }}40;">
-                            
-                            @if($inscricao->statusInscricao->visivel_estudante)
-                                {{ $inscricao->statusInscricao->titulo_amigavel ?? 'Pendente' }}
-                            @else
-                                {{ 'Aguardando atualização...' }}
-                            @endif
-                            
+
+                        @php
+                            $corHex = $inscricao->statusInscricao->cor ?? '#6B7280';
+                            $statusExibido = ($inscricao->statusInscricao && ($inscricao->statusInscricao->visivel_estudante ?? true))
+                                ? ($inscricao->statusInscricao->titulo_amigavel ?: $inscricao->statusInscricao->nome)
+                                : ($inscricao->statusInscricao->nome ?? 'Em Análise');
+                        @endphp
+                        <span class="px-2.5 py-1 text-[11px] font-semibold rounded border uppercase tracking-wider w-max"
+                              style="background-color: {{ $corHex }}12; color: {{ $corHex }}; border-color: {{ $corHex }}35;">
+                            {{ $statusExibido }}
                         </span>
                     </div>
-                    
-                    <div class="bg-slate-50 dark:bg-gray-900/50 p-5 rounded-xl border border-slate-100 dark:border-gray-700 grid grid-cols-1 sm:grid-cols-3 gap-5">
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700">
                         <div>
-                            <span class="block text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500 mb-1">Curso Escolhido</span>
-                            <span class="text-sm font-bold text-gray-800 dark:text-gray-200 leading-tight">{{ $inscricao->curso->nome ?? '-' }}</span>
+                            <span class="block text-[10px] uppercase font-semibold text-gray-400 mb-0.5">Unidade / Sede</span>
+                            <span class="text-xs font-bold text-gray-900 dark:text-white">
+                                {{ $inscricao->unidade->nome ?? 'Não informada' }}
+                                @if($inscricao->estado) ({{ $inscricao->estado }}) @endif
+                            </span>
                         </div>
-                        <div class="sm:border-l sm:border-gray-200 sm:dark:border-gray-700 sm:pl-5">
-                            <span class="block text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500 mb-1">Unidade / Sede</span>
-                            <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ $inscricao->unidade->nome ?? '-' }}</span>
+                        <div>
+                            <span class="block text-[10px] uppercase font-semibold text-gray-400 mb-0.5">Curso Escolhido</span>
+                            <span class="text-xs font-bold text-gray-900 dark:text-white">{{ $inscricao->curso->nome ?? 'Não informado' }}</span>
                         </div>
-                        <div class="sm:border-l sm:border-gray-200 sm:dark:border-gray-700 sm:pl-5">
-                            <span class="block text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500 mb-1">Turno</span>
-                            <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ $inscricao->turno->nome ?? '-' }}</span>
+                        <div>
+                            <span class="block text-[10px] uppercase font-semibold text-gray-400 mb-0.5">Turno</span>
+                            <span class="text-xs font-bold text-gray-900 dark:text-white">{{ $inscricao->turno->nome ?? 'Não informado' }}</span>
                         </div>
                     </div>
-                    
-                    <div class="mt-6 flex flex-wrap gap-3">
-                        <button wire:click="abrirDetalhesInscricao({{ $inscricao->id }})" class="px-5 py-2.5 bg-purpura-50 hover:bg-purpura-100 text-purpura-700 border border-purpura-100 rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-2">
-                            <i class="ph-bold ph-identification-card text-lg"></i> Ficha Completa
+
+                    <div class="flex flex-wrap items-center gap-2 pt-1">
+                        <button type="button"
+                                wire:click="abrirDetalhesInscricao({{ $inscricao->id }})"
+                                class="px-3.5 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg text-xs font-semibold transition inline-flex items-center gap-1.5">
+                            <i class="ph ph-eye"></i> Ver Respostas
                         </button>
-                        <button wire:click="abrirModalSolicitacao" class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-2">
-                            <i class="ph-bold ph-swap text-lg"></i> Solicitar Alteração
+
+                        <button type="button"
+                                wire:click="baixarFichaInscricaoPdf({{ $inscricao->id }})"
+                                wire:loading.attr="disabled"
+                                class="px-3.5 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 text-purpura-700 dark:text-purpura-300 border border-purpura-200 dark:border-purpura-800 rounded-lg text-xs font-semibold transition inline-flex items-center gap-1.5">
+                            <i class="ph ph-file-pdf"></i> Baixar Ficha (PDF)
+                        </button>
+
+                        @if($uploadLiberado)
+                            <a href="{{ route('student.student.documentos') }}"
+                               wire:navigate
+                               class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition inline-flex items-center gap-1.5">
+                                <i class="ph ph-upload-simple"></i> Enviar Documentos / Laudo
+                            </a>
+                        @else
+                            <span class="px-3 py-2 bg-gray-50 dark:bg-gray-900 text-gray-400 border border-gray-200 dark:border-gray-700 rounded-lg text-xs inline-flex items-center gap-1.5"
+                                  title="O envio de documentos será habilitado quando sua inscrição atingir a etapa documental">
+                                <i class="ph ph-lock-key"></i> Upload de Documentos Aguardando Etapa
+                            </span>
+                        @endif
+
+                        <button type="button"
+                                wire:click="abrirModalSolicitacao"
+                                class="px-3.5 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-semibold transition inline-flex items-center gap-1.5 ml-auto">
+                            <i class="ph ph-arrows-left-right"></i> Solicitar Troca de Curso/Unidade
                         </button>
                     </div>
                 </div>
             @else
-                <div class="p-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 text-center">
-                    <i class="ph-fill ph-warning-circle text-4xl text-slate-300 mb-3 block"></i>
-                    <h3 class="text-lg font-bold text-slate-800 dark:text-white">Sem inscrições ativas</h3>
-                    <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Não foi encontrada nenhuma inscrição em andamento para o seu perfil.</p>
+                <div class="p-8 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
+                    <p class="text-sm font-bold text-gray-800 dark:text-white">Nenhuma inscrição encontrada</p>
+                    <p class="text-xs text-gray-500 mt-1">Não localizamos inscrições vinculadas ao seu perfil até o momento.</p>
                 </div>
             @endif
 
-            <!-- Card Última Solicitação de Helpdesk -->
-            @if(isset($minhasSolicitacoes) && $minhasSolicitacoes->count() > 0)
-                @php $ultimaSolicitacao = $minhasSolicitacoes->first(); @endphp
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                    <div class="flex items-start gap-4">
-                        <div class="p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full shrink-0">
-                            <i class="ph-fill ph-envelope-open text-2xl"></i>
-                        </div>
-                        <div>
-                            <div class="flex items-center gap-2 mb-1">
-                                <h3 class="text-sm font-bold text-slate-800 dark:text-white">
-                                    {{ $ultimaSolicitacao->tema === 'alteracao_academica' ? 'Troca de Unidade/Curso' : str_replace('_', ' ', $ultimaSolicitacao->tema) }}
-                                </h3>
-                                @if($ultimaSolicitacao->status === 'aprovada')
-                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-[9px] font-bold uppercase rounded border border-green-200">Aprovado</span>
-                                @elseif($ultimaSolicitacao->status === 'rejeitada')
-                                    <span class="px-2 py-0.5 bg-red-100 text-red-700 text-[9px] font-bold uppercase rounded border border-red-200">Reprovado</span>
-                                @else
-                                    <span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-[9px] font-bold uppercase rounded border border-yellow-200">Em Análise</span>
-                                @endif
-                            </div>
-                            <p class="text-xs text-gray-500 max-w-sm truncate italic">"{{ $ultimaSolicitacao->justificativa }}"</p>
-                        </div>
+            {{-- CARD: FORMULÁRIOS GERAIS PREENCHIDOS E FASE ATUAL --}}
+            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-5 py-3.5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">
+                            Formulários Preenchidos e Fase Atual
+                        </h3>
+                        <p class="text-[11px] text-gray-500">Histórico de formulários gerais respondidos por você.</p>
                     </div>
-                    <div class="shrink-0 sm:text-right border-t sm:border-t-0 pt-4 sm:pt-0 border-gray-100 dark:border-gray-700">
-                        <a href="{{ route('student.solicitacoes') }}" class="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center justify-start sm:justify-end gap-1">
-                            Acessar Histórico Completo <i class="ph-bold ph-arrow-right"></i>
-                        </a>
-                        <span class="text-[10px] font-medium text-gray-400 mt-1 block">Pedido efetuado em {{ $ultimaSolicitacao->created_at->format('d/m/Y') }}</span>
-                    </div>
+                    <span class="text-xs text-gray-400 font-mono">{{ count($formulariosGerais) }} registro(s)</span>
                 </div>
-            @endif
+
+                @if(count($formulariosGerais) > 0)
+                    <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @foreach($formulariosGerais as $fItem)
+                            <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-50/60 dark:hover:bg-gray-700/30 transition">
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="text-xs font-bold text-gray-900 dark:text-white truncate">{{ $fItem['titulo'] }}</span>
+                                        <span class="px-2 py-0.5 text-[10px] font-semibold rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-300">
+                                            {{ $fItem['fase_nome'] }} (Etapa {{ $fItem['etapa_atual'] }}/{{ $fItem['total_etapas'] }})
+                                        </span>
+                                        @if($fItem['concluido'])
+                                            <span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                Concluído
+                                            </span>
+                                        @else
+                                            <span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-amber-50 text-amber-700 border border-amber-200">
+                                                Em Preenchimento
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <p class="text-[11px] text-gray-400 mt-0.5">Última atualização em {{ $fItem['data_envio'] }}</p>
+                                </div>
+
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <button type="button"
+                                            wire:click="baixarFichaRespostaPdf({{ $fItem['resposta_id'] }})"
+                                            class="px-2.5 py-1.5 rounded border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition inline-flex items-center gap-1">
+                                        <i class="ph ph-file-pdf text-purpura-600"></i> PDF
+                                    </button>
+                                    @if(!$fItem['concluido'])
+                                        <a href="{{ url('/f/' . $fItem['slug']) }}" target="_blank" class="px-2.5 py-1.5 rounded bg-purpura-600 hover:bg-purpura-700 text-white text-xs font-semibold transition">
+                                            Continuar ↗
+                                        </a>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="p-6 text-center text-xs text-gray-400">
+                        Nenhum formulário complementar respondido até o momento.
+                    </div>
+                @endif
+            </div>
+
+            {{-- CARD: RESUMO DAS SOLICITAÇÕES DE TROCA / HELPDESK --}}
+            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-5 py-3.5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">
+                        Minhas Solicitações Recentes
+                    </h3>
+                    <a href="{{ route('student.solicitacoes') }}" wire:navigate class="text-xs font-semibold text-purpura-600 hover:underline">
+                        Ver todas ({{ $minhasSolicitacoes->count() }}) →
+                    </a>
+                </div>
+
+                @if($minhasSolicitacoes->count() > 0)
+                    <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @foreach($minhasSolicitacoes->take(3) as $solic)
+                            @php $pay = is_array($solic->payload) ? $solic->payload : []; @endphp
+                            <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-bold text-gray-900 dark:text-white">
+                                            {{ $solic->tema === 'alteracao_academica' ? 'Solicitação de Troca de Unidade/Curso/Turno' : ucfirst(str_replace('_', ' ', $solic->tema)) }}
+                                        </span>
+                                        <span class="text-[11px] text-gray-400">• {{ $solic->created_at->format('d/m/Y H:i') }}</span>
+                                    </div>
+                                    @if(!empty($pay['nova_unidade_nome']) || !empty($pay['novo_curso_nome']))
+                                        <p class="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
+                                            Destino solicitado: <strong>{{ $pay['nova_unidade_nome'] ?? '-' }}</strong> — <strong>{{ $pay['novo_curso_nome'] ?? '-' }}</strong> ({{ $pay['novo_turno_nome'] ?? '-' }})
+                                        </p>
+                                    @endif
+                                    <p class="text-xs text-gray-500 truncate mt-0.5">Motivo: "{{ $solic->justificativa }}"</p>
+                                </div>
+
+                                <div class="shrink-0">
+                                    @if($solic->status === 'aprovada')
+                                        <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold uppercase rounded">Aprovada</span>
+                                    @elseif($solic->status === 'rejeitada')
+                                        <span class="px-2.5 py-1 bg-red-50 text-red-700 border border-red-200 text-[10px] font-bold uppercase rounded">Reprovada</span>
+                                    @else
+                                        <span class="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold uppercase rounded">Em Análise</span>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="p-6 text-center text-xs text-gray-400">
+                        Nenhuma solicitação registrada.
+                    </div>
+                @endif
+            </div>
+
         </div>
 
-        <!-- COLUNA DIREITA: Timeline do Histórico de Inscrições -->
-        <div class="lg:col-span-1 space-y-6">
-            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700">
-                <h3 class="text-md font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">
-                    <i class="ph-fill ph-clock-counter-clockwise text-gray-400 text-lg"></i> Histórico Acadêmico
-                </h3>
+        {{-- COLUNA DIREITA (4 COLUNAS): HISTÓRICO DE TODAS AS INSCRIÇÕES --}}
+        <div class="lg:col-span-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-5 py-3.5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">
+                        Histórico de Inscrições
+                    </h3>
+                    <span class="text-xs text-gray-400 font-mono">{{ $historicoInscricoes->count() }}</span>
+                </div>
 
-                @if(isset($historicoInscricoes) && $historicoInscricoes->count() > 0)
-                    <div class="space-y-6 pl-2">
+                @if($historicoInscricoes->count() > 0)
+                    <div class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach($historicoInscricoes as $hist)
-                            <div class="relative pl-6 border-l-2 {{ $loop->first ? 'border-purpura-500' : 'border-gray-200 dark:border-gray-700' }}" wire:key="hist-{{ $hist->id }}">
-                                
-                                @if($loop->first)
-                                    <span class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-purpura-500 ring-4 ring-white dark:ring-gray-800"></span>
-                                @else
-                                    <span class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-gray-300 dark:bg-gray-600 ring-4 ring-white dark:ring-gray-800"></span>
-                                @endif
-                                
-                                <div class="flex flex-col -mt-1">
-                                    <div class="flex flex-col gap-0.5 mb-1.5">
-                                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{{ $hist->created_at->format('d/m/Y') }}</span>
-                                        <span class="text-sm font-bold text-gray-900 dark:text-white leading-tight">{{ $hist->curso->nome ?? 'Curso Indefinido' }}</span>
-                                    </div>
-                                    <span class="text-xs text-gray-600 dark:text-gray-400 mb-2">{{ $hist->unidade->nome ?? '-' }} • {{ $hist->turno->nome ?? '-' }}</span>
-                                    
-                                    <button wire:click="abrirDetalhesInscricao({{ $hist->id }})" class="text-[11px] font-bold px-3 py-1 bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-200 rounded-md w-max transition">
-                                        Visualizar Ficha
+                            <div class="p-4 space-y-2 hover:bg-gray-50/60 dark:hover:bg-gray-700/30 transition" wire:key="hist-{{ $hist->id }}">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-[11px] font-mono text-gray-400">
+                                        #{{ $hist->id }} • {{ $hist->created_at->format('d/m/Y') }}
+                                    </span>
+                                    <span class="px-2 py-0.5 text-[10px] font-semibold rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300">
+                                        {{ $hist->statusInscricao->nome ?? 'Registrada' }}
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <p class="text-xs font-bold text-gray-900 dark:text-white">{{ $hist->curso->nome ?? 'Curso não definido' }}</p>
+                                    <p class="text-[11px] text-gray-500">{{ $hist->unidade->nome ?? '-' }} • {{ $hist->turno->nome ?? '-' }}</p>
+                                    <p class="text-[10px] text-gray-400 mt-0.5">Ciclo: {{ $hist->ciclo->nome ?? '-' }}</p>
+                                </div>
+
+                                <div class="flex items-center gap-2 pt-1">
+                                    <button type="button"
+                                            wire:click="abrirDetalhesInscricao({{ $hist->id }})"
+                                            class="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded text-[11px] font-semibold transition">
+                                        Ver Ficha
+                                    </button>
+                                    <button type="button"
+                                            wire:click="baixarFichaInscricaoPdf({{ $hist->id }})"
+                                            class="px-2.5 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-purpura-600 dark:text-purpura-400 hover:bg-gray-50 rounded text-[11px] font-semibold transition inline-flex items-center gap-1">
+                                        <i class="ph ph-file-pdf"></i> Baixar PDF
                                     </button>
                                 </div>
                             </div>
                         @endforeach
                     </div>
                 @else
-                    <div class="text-center py-6">
-                        <i class="ph-fill ph-file-dashed text-3xl text-gray-300 mb-2 block"></i>
-                        <p class="text-xs text-gray-500 font-medium">Nenhum histórico encontrado.</p>
+                    <div class="p-6 text-center text-xs text-gray-400">
+                        Nenhum histórico de inscrição encontrado.
                     </div>
                 @endif
             </div>
         </div>
+
     </div>
 
-    <!-- MODAL DE ALTERAÇÃO ACADÊMICA (HELPDESK) -->
+    {{-- MODAL MINIMALISTA: SOLICITAR TROCA DE UNIDADE / CURSO / TURNO --}}
     @if($modalSolicitacaoAberto)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4 overflow-y-auto">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col my-8 border border-gray-200 dark:border-gray-700">
-                <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
-                    <h3 class="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-                        <i class="ph-fill ph-swap text-purpura-500 text-xl"></i> Solicitar Alteração
-                    </h3>
-                    <button wire:click="$set('modalSolicitacaoAberto', false)" class="text-gray-400 hover:text-red-500 transition"><i class="ph-bold ph-x text-xl"></i></button>
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4 overflow-y-auto">
+            <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg border border-gray-200 dark:border-gray-700 overflow-hidden my-8">
+                <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900 dark:text-white">
+                            Solicitar Troca de Unidade / Curso / Turno
+                        </h3>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            Escolha uma combinação disponível no ciclo atual ({{ $inscricao->ciclo->nome ?? '' }}).
+                        </p>
+                    </div>
+                    <button type="button" wire:click="$set('modalSolicitacaoAberto', false)" class="text-gray-400 hover:text-gray-700 dark:hover:text-white p-1">
+                        <i class="ph ph-x text-lg"></i>
+                    </button>
                 </div>
-                <form wire:submit.prevent="salvarSolicitacao" class="p-6 space-y-5">
+
+                <form wire:submit.prevent="salvarSolicitacao" class="p-5 space-y-4">
+                    <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
+                        <div class="text-xs">
+                            <span class="font-semibold text-gray-800 dark:text-gray-200 block">
+                                UF da sua inscrição: {{ $inscricao->estado ?: 'Não informada' }}
+                            </span>
+                            <span class="text-[11px] text-gray-500">
+                                Marque ao lado caso deseje visualizar unidades de outros estados.
+                            </span>
+                        </div>
+                        <label class="inline-flex items-center gap-2 cursor-pointer shrink-0">
+                            <input type="checkbox" wire:model.live="queroOutroEstado" class="w-4 h-4 rounded text-purpura-600 border-gray-300 focus:ring-purpura-500">
+                            <span class="text-xs font-semibold text-gray-800 dark:text-gray-200">Quero em outro estado</span>
+                        </label>
+                    </div>
+
                     <div>
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Nova Unidade Desejada <span class="text-red-500">*</span></label>
-                        <select wire:model="novaUnidadeId" class="w-full px-3 py-2.5 text-sm font-semibold border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-purpura-500 shadow-sm">
-                            <option value="">Selecione...</option>
-                            @foreach($unidadesDb as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                            Nova Unidade Desejada <span class="text-red-500">*</span>
+                        </label>
+                        <select wire:model.live="novaUnidadeId" class="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white">
+                            <option value="">Selecione a unidade...</option>
+                            @foreach($this->unidadesDisponiveisTroca as $u)
+                                <option value="{{ $u->id }}">{{ $u->nome }} {{ $u->estado ? "({$u->estado})" : '' }}</option>
+                            @endforeach
                         </select>
-                        @error('novaUnidadeId') <span class="text-red-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
+                        @error('novaUnidadeId') <span class="text-red-600 text-xs mt-1 block">{{ $message }}</span> @enderror
                     </div>
+
                     <div>
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Novo Curso Desejado <span class="text-red-500">*</span></label>
-                        <select wire:model="novoCursoId" class="w-full px-3 py-2.5 text-sm font-semibold border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-purpura-500 shadow-sm">
-                            <option value="">Selecione...</option>
-                            @foreach($cursosDb as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                            Novo Curso Desejado <span class="text-red-500">*</span>
+                        </label>
+                        <select wire:model.live="novoCursoId" @disabled(empty($novaUnidadeId)) class="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white disabled:opacity-50">
+                            <option value="">{{ empty($novaUnidadeId) ? 'Selecione a unidade primeiro...' : 'Selecione o curso...' }}</option>
+                            @foreach($this->cursosDisponiveisTroca as $c)
+                                <option value="{{ $c->id }}">{{ $c->nome }}</option>
+                            @endforeach
                         </select>
-                        @error('novoCursoId') <span class="text-red-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
+                        @error('novoCursoId') <span class="text-red-600 text-xs mt-1 block">{{ $message }}</span> @enderror
                     </div>
+
                     <div>
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Novo Turno Desejado <span class="text-red-500">*</span></label>
-                        <select wire:model="novoTurnoId" class="w-full px-3 py-2.5 text-sm font-semibold border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-purpura-500 shadow-sm">
-                            <option value="">Selecione...</option>
-                            @foreach($turnosDb as $t) <option value="{{ $t->id }}">{{ $t->nome }}</option> @endforeach
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                            Novo Turno Desejado <span class="text-red-500">*</span>
+                        </label>
+                        <select wire:model.live="novoTurnoId" @disabled(empty($novoCursoId)) class="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white disabled:opacity-50">
+                            <option value="">{{ empty($novoCursoId) ? 'Selecione o curso primeiro...' : 'Selecione o turno...' }}</option>
+                            @foreach($this->turnosDisponiveisTroca as $t)
+                                <option value="{{ $t->id }}">{{ $t->nome }}</option>
+                            @endforeach
                         </select>
-                        @error('novoTurnoId') <span class="text-red-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
+                        @error('novoTurnoId') <span class="text-red-600 text-xs mt-1 block">{{ $message }}</span> @enderror
                     </div>
+
                     <div>
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Justificativa do Pedido <span class="text-red-500">*</span></label>
-                        <textarea wire:model="motivoSolicitacao" rows="3" placeholder="Explique brevemente o motivo da troca..." class="w-full px-3 py-2.5 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-purpura-500 shadow-sm"></textarea>
-                        @error('motivoSolicitacao') <span class="text-red-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                            Motivo da Solicitação de Troca <span class="text-red-500">*</span>
+                        </label>
+                        <textarea wire:model="motivoSolicitacao" rows="3" placeholder="Descreva o motivo para a troca de unidade, curso ou turno..." class="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white"></textarea>
+                        @error('motivoSolicitacao') <span class="text-red-600 text-xs mt-1 block">{{ $message }}</span> @enderror
                     </div>
-                    <div class="flex justify-end gap-3 pt-5 border-t border-gray-100 dark:border-gray-700 mt-2">
-                        <button type="button" wire:click="$set('modalSolicitacaoAberto', false)" class="px-5 py-2.5 bg-white border border-gray-300 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 shadow-sm transition">Cancelar</button>
-                        <button type="submit" class="px-6 py-2.5 bg-purpura-600 hover:bg-purpura-700 text-white rounded-xl text-xs font-extrabold shadow-md flex items-center gap-2 transition hover:-translate-y-0.5">
-                            <i class="ph-bold ph-paper-plane-tilt text-base"></i> Enviar Pedido
+
+                    <div class="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <button type="button" wire:click="$set('modalSolicitacaoAberto', false)" class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-purpura-600 hover:bg-purpura-700 text-white rounded-lg text-xs font-semibold transition">
+                            Enviar Solicitação
                         </button>
                     </div>
                 </form>
@@ -236,92 +413,73 @@
         </div>
     @endif
 
-    <!-- MODAL: FICHA COMPLETA DA INSCRIÇÃO (DADOS DINÂMICOS E RESPOSTAS) -->
+    {{-- MODAL MINIMALISTA: DETALHES E RESPOSTAS DA INSCRIÇÃO --}}
     @if($modalInscricaoAberto && $inscricaoDetalhe)
-        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4 overflow-y-auto">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col my-8 border border-gray-200 dark:border-gray-700">
-                
-                <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50 rounded-t-2xl">
-                    <h3 class="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-                        <i class="ph-fill ph-identification-card text-purpura-500 text-2xl"></i> Ficha da Inscrição #{{ $inscricaoDetalhe->id }}
-                    </h3>
-                    <button wire:click="$set('modalInscricaoAberto', false)" class="text-gray-400 hover:text-red-500 transition"><i class="ph-bold ph-x text-xl"></i></button>
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4 overflow-y-auto">
+            <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-3xl border border-gray-200 dark:border-gray-700 overflow-hidden my-8">
+                <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900 dark:text-white">
+                            Ficha da Inscrição #{{ $inscricaoDetalhe->id }}
+                        </h3>
+                        <p class="text-xs text-gray-500">Registrada em {{ $inscricaoDetalhe->created_at->format('d/m/Y \à\s H:i') }}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button"
+                                wire:click="baixarFichaInscricaoPdf({{ $inscricaoDetalhe->id }})"
+                                class="px-3 py-1.5 bg-purpura-600 hover:bg-purpura-700 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5">
+                            <i class="ph ph-file-pdf"></i> Baixar PDF
+                        </button>
+                        <button type="button" wire:click="$set('modalInscricaoAberto', false)" class="text-gray-400 hover:text-gray-700 dark:hover:text-white p-1">
+                            <i class="ph ph-x text-lg"></i>
+                        </button>
+                    </div>
                 </div>
-                
-                <div class="p-6 sm:p-8 overflow-y-auto max-h-[70vh] custom-scrollbar">
-                    
-                    <div class="flex justify-between items-start mb-6">
+
+                <div class="p-5 overflow-y-auto max-h-[70vh] space-y-5">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs">
                         <div>
-                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Data de Registo</span>
-                            <span class="text-sm font-bold text-gray-900 dark:text-white">{{ $inscricaoDetalhe->created_at->format('d/m/Y às H:i') }}</span>
+                            <span class="text-[10px] uppercase text-gray-400 font-semibold block">Unidade</span>
+                            <span class="font-bold text-gray-900 dark:text-white">{{ $inscricaoDetalhe->unidade->nome ?? '-' }}</span>
                         </div>
-                        <div class="text-right">
-                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Status Oficial</span>
-                            @php $corHex = $inscricaoDetalhe->statusInscricao->cor ?? '#6B7280'; @endphp
-                            <span class="px-2.5 py-1 text-[10px] font-bold rounded border shadow-sm uppercase tracking-wider inline-block" style="background-color: {{ $corHex }}15; color: {{ $corHex }}; border-color: {{ $corHex }}40;">
-                                @if($inscricao->statusInscricao->visivel_estudante)
-                                    {{ $inscricao->statusInscricao->titulo_amigavel ?? 'Pendente' }}
-                                @else
-                                    {{ 'Aguardando atualização...' }}
-                                @endif
-                            </span>
+                        <div>
+                            <span class="text-[10px] uppercase text-gray-400 font-semibold block">Curso</span>
+                            <span class="font-bold text-gray-900 dark:text-white">{{ $inscricaoDetalhe->curso->nome ?? '-' }}</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] uppercase text-gray-400 font-semibold block">Turno</span>
+                            <span class="font-bold text-gray-900 dark:text-white">{{ $inscricaoDetalhe->turno->nome ?? '-' }}</span>
                         </div>
                     </div>
 
-                    <div class="space-y-6">
-                        <div>
-                            <h4 class="text-xs font-bold text-purpura-600 uppercase tracking-widest mb-3 flex items-center gap-1.5 border-b border-gray-100 dark:border-gray-700 pb-2">
-                                <i class="ph-bold ph-student text-base"></i> Interesse Base
-                            </h4>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                                    <span class="block text-[10px] uppercase font-bold text-gray-400 mb-0.5">Curso</span>
-                                    <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ $inscricaoDetalhe->curso->nome ?? '-' }}</span>
+                    <div class="space-y-2.5">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500">Respostas Registradas</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            @php
+                                $dinDetalhe = is_array($inscricaoDetalhe->dados_dinamicos)
+                                    ? $inscricaoDetalhe->dados_dinamicos
+                                    : (json_decode($inscricaoDetalhe->dados_dinamicos ?? '{}', true) ?: []);
+                            @endphp
+                            @forelse($dinDetalhe as $chave => $valor)
+                                @continue(str_contains(strtolower($chave), 'form_config') || str_starts_with($chave, '_'))
+                                <div class="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs">
+                                    <span class="block text-[10px] font-semibold uppercase text-gray-400 mb-0.5">{{ str_replace('_', ' ', $chave) }}</span>
+                                    <span class="font-medium text-gray-900 dark:text-white break-words">
+                                        {{ is_array($valor) ? implode(', ', $valor) : ($valor ?: '-') }}
+                                    </span>
                                 </div>
-                                <div class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                                    <span class="block text-[10px] uppercase font-bold text-gray-400 mb-0.5">Polo / Sede</span>
-                                    <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ $inscricaoDetalhe->unidade->nome ?? '-' }}</span>
+                            @empty
+                                <div class="col-span-2 p-4 text-center text-xs text-gray-400 border border-dashed border-gray-200 rounded-lg">
+                                    Nenhum campo complementar preenchido.
                                 </div>
-                                <div class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                                    <span class="block text-[10px] uppercase font-bold text-gray-400 mb-0.5">Turno</span>
-                                    <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ $inscricaoDetalhe->turno->nome ?? '-' }}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h4 class="text-xs font-bold text-purpura-600 uppercase tracking-widest mb-3 flex items-center gap-1.5 border-b border-gray-100 dark:border-gray-700 pb-2">
-                                <i class="ph-bold ph-list-dashes text-base"></i> Respostas Adicionais (Formulário)
-                            </h4>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                @if($inscricaoDetalhe->dados_dinamicos && count(array_filter(array_keys($inscricaoDetalhe->dados_dinamicos), fn($k) => !str_contains(strtolower($k), 'form_config'))) > 0)
-                                    @foreach($inscricaoDetalhe->dados_dinamicos as $chave => $valor)
-                                        @continue(str_contains(strtolower($chave), 'form_config'))
-                                        
-                                        @php 
-                                            $valorFormatado = is_array($valor) ? implode(', ', $valor) : $valor; 
-                                            $labelOriginal = str_replace('_', ' ', $chave);
-                                        @endphp
-                                        
-                                        <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col justify-center shadow-sm">
-                                            <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 truncate" title="{{ $labelOriginal }}">{{ $labelOriginal }}</span>
-                                            <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $valorFormatado ?: '-' }}</span>
-                                        </div>
-                                    @endforeach
-                                @else
-                                    <div class="col-span-2 text-center py-6 bg-gray-50 dark:bg-gray-900/30 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
-                                        <i class="ph-fill ph-file-dashed text-2xl text-gray-400 mb-2"></i>
-                                        <p class="text-sm text-gray-500 font-medium">Nenhum campo complementar preenchido nesta etapa.</p>
-                                    </div>
-                                @endif
-                            </div>
+                            @endforelse
                         </div>
                     </div>
                 </div>
 
-                <div class="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-end gap-3 rounded-b-2xl">
-                    <button wire:click="$set('modalInscricaoAberto', false)" class="px-6 py-2.5 bg-white border border-gray-300 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 shadow-sm transition">
-                        Fechar Visualização
+                <div class="px-5 py-3.5 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-end">
+                    <button type="button" wire:click="$set('modalInscricaoAberto', false)" class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-300">
+                        Fechar
                     </button>
                 </div>
             </div>
