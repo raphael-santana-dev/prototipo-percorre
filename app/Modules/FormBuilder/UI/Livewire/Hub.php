@@ -12,6 +12,7 @@ use App\Models\CampoFormulario;
 use App\Models\Etapa;
 use App\Models\FormularioFase;
 use App\Models\CicloAprendizagem;
+use App\Traits\WithEditingLock;
 
 #[Layout('components.layouts.app')]
 #[Title('Central de Formulários')]
@@ -281,6 +282,18 @@ class Hub extends Component
             ->where('is_rascunho', $this->abaStatus === 'rascunhos')
             ->orderBy('updated_at', 'desc')
             ->get();
+
+        WithEditingLock::limparLocksResiduaisDoUsuarioLogado(
+            $formulariosList->pluck('id')->toArray(),
+            ['formulario']
+        );
+
+        if ($this->ciclos && $this->ciclos->isNotEmpty()) {
+            WithEditingLock::limparLocksResiduaisDoUsuarioLogado(
+                $this->ciclos->pluck('id')->toArray(),
+                ['ciclo', 'ciclo_dados', 'ciclo_regras']
+            );
+        }
 
         return view('livewire.form-builder.hub', [
             'formulariosList' => $formulariosList,
