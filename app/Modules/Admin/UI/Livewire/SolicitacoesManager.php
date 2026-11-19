@@ -208,11 +208,41 @@ class SolicitacoesManager extends Component
         }
 
         $user = auth()->user();
-        if ($user && $user->hasRole('professor') && !$user->hasAnyRole(['dev', 'admin']) && !$user->can('inscricao.edicao.solicitacao_troca')) {
-            $query->where(function ($q) use ($user) {
-                $q->where('responsavel_id', $user->id)
-                  ->orWhereNull('responsavel_id');
-            });
+        if ($user && method_exists($user, 'possuiTravaPorVinculoAtiva') && $user->possuiTravaPorVinculoAtiva()) {
+            $combinacoes = $user->obterCombinacoesVinculoAtivas();
+
+            if (empty($combinacoes)) {
+                $query->whereRaw('1 = 0');
+            } else {
+                // Localiza os IDs de estudantes e de inscrições que pertencem às combinações exatas do usuário
+                $inscricoesPermitidasQuery = Inscricao::query()->where(function ($qComb) use ($combinacoes) {
+                    foreach ($combinacoes as $comb) {
+                        $qComb->orWhere(function ($qPar) use ($comb) {
+                            $qPar->where('unidade_id', $comb['unidade_id'])
+                                 ->where('curso_id', $comb['curso_id'])
+                                 ->where('turno_id', $comb['turno_id']);
+                        });
+                    }
+                });
+
+                $studentIdsPermitidos   = (clone $inscricoesPermitidasQuery)->whereNotNull('student_id')->pluck('student_id')->unique()->toArray();
+                $inscricaoIdsPermitidos = (clone $inscricoesPermitidasQuery)->pluck('id')->map(fn($id) => (string) $id)->toArray();
+
+                $query->where(function ($qFiltro) use ($studentIdsPermitidos, $inscricaoIdsPermitidos, $user) {
+                    $qFiltro->where('responsavel_id', $user->id);
+
+                    if (!empty($studentIdsPermitidos)) {
+                        $qFiltro->orWhere(function ($qStu) use ($studentIdsPermitidos) {
+                            $qStu->where('solicitante_type', \App\Modules\Student\Domain\Models\Student::class)
+                                 ->whereIn('solicitante_id', $studentIdsPermitidos);
+                        });
+                    }
+
+                    if (!empty($inscricaoIdsPermitidos)) {
+                        $qFiltro->orWhereIn(DB::raw("payload->>'inscricao_id'"), $inscricaoIdsPermitidos);
+                    }
+                });
+            }
         }
 
         return view('livewire.admin.solicitacoes-manager', [
