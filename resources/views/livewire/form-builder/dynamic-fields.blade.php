@@ -88,9 +88,19 @@
                     </button>
                 </div>
 
-                <button type="button" wire:click="abrirModalFases" class="btn btn--secondary btn--small">
-                    <i class="ph ph-calendar-plus"></i> Fases
+                <button type="button"
+                        wire:click="toggleEncerradoContexto"
+                        class="btn btn--secondary btn--small {{ $isEncerrado ? '!bg-amber-50 !border-amber-300 !text-amber-800 dark:!bg-amber-900/30 dark:!border-amber-700 dark:!text-amber-300' : '' }}"
+                        title="{{ $isEncerrado ? 'Clique para reabrir a edição deste Ciclo/Formulário' : 'Clique para encerrar e bloquear edições neste Ciclo/Formulário' }}">
+                    <i class="ph-fill {{ $isEncerrado ? 'ph-archive' : 'ph-lock-key-open' }}"></i>
+                    <span>{{ $isEncerrado ? 'Encerrado (Somente Leitura)' : 'Encerrar Edição' }}</span>
                 </button>
+
+                @if(!$isEncerrado)
+                    <button type="button" wire:click="abrirModalFases" class="btn btn--secondary btn--small">
+                        <i class="ph ph-calendar-plus"></i> Fases
+                    </button>
+                @endif
 
                 @if(auth()->user()->hasAnyRole(['dev', 'admin']) || auth()->user()->can('formulario.testar') || auth()->user()->can('inscricao.criar'))
                     @php
@@ -107,11 +117,24 @@
             </div>
         </div>
 
+        @if($isEncerrado)
+            <div class="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-800 px-5 py-2 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200 shrink-0">
+                <span class="font-semibold flex items-center gap-2">
+                    <i class="ph-fill ph-archive text-amber-600 text-base"></i>
+                    Modo Somente Visualização: Este {{ $contextoTipo === 'ciclo' ? 'Ciclo' : 'Formulário' }} está encerrado para alterações estruturais (as inscrições permanecem editáveis).
+                </span>
+            </div>
+        @endif
+
         {{-- WORKSPACE EM 3 COLUNAS --}}
-        <div class="flex flex-1 w-full overflow-hidden relative bg-gray-50 dark:bg-gray-950">
-            @include('livewire.form-builder.partials.palette-sidebar')
+        <div class="flex flex-1 w-full overflow-hidden relative bg-gray-50 dark:bg-gray-950 {{ $isEncerrado ? 'select-none' : '' }}">
+            @if(!$isEncerrado)
+                @include('livewire.form-builder.partials.palette-sidebar')
+            @endif
             @include('livewire.form-builder.partials.canvas-preview')
-            @include('livewire.form-builder.partials.inspector-sidebar')
+            @if(!$isEncerrado)
+                @include('livewire.form-builder.partials.inspector-sidebar')
+            @endif
         </div>
     </fieldset>
 

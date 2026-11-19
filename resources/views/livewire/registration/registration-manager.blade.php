@@ -186,12 +186,30 @@
                                     <span class="font-medium text-white text-sm">{{ count($selecionadas) }} inscrições selecionadas</span>
                                 </div>
 
-                                <div class="flex items-center gap-1.5">
+                                <div class="flex flex-wrap items-center gap-1.5">
                                     <button type="button" wire:click="solicitarExportacao('xlsx')" class="btn btn--ondark btn--small !bg-emerald-600 hover:!bg-emerald-700 border-none" title="Exportar Selecionadas para Excel">
                                         <i class="ph-bold ph-file-xls"></i> Excel
                                     </button>
                                     <button type="button" wire:click="solicitarExportacao('csv')" class="btn btn--ondark btn--small !bg-blue-600 hover:!bg-blue-700 border-none" title="Exportar Selecionadas para CSV">
                                         <i class="ph-bold ph-file-csv"></i> CSV
+                                    </button>
+
+                                    <div class="h-5 w-px bg-gray-700 mx-1"></div>
+
+                                    <button type="button"
+                                            wire:click="definirLegadoEmLote(true)"
+                                            wire:confirm="Marcar as inscrições selecionadas como Legado (somente visualização)?"
+                                            class="btn btn--ondark btn--small !bg-amber-600 hover:!bg-amber-700 border-none"
+                                            title="Definir selecionadas como Legado (Somente Leitura)">
+                                        <i class="ph-fill ph-archive"></i> Marcar Legado
+                                    </button>
+
+                                    <button type="button"
+                                            wire:click="definirLegadoEmLote(false)"
+                                            wire:confirm="Remover a trava de Legado das inscrições selecionadas?"
+                                            class="btn btn--ondark btn--small border-gray-600 hover:bg-gray-700"
+                                            title="Desmarcar Legado e liberar edição">
+                                        <i class="ph-bold ph-lock-key-open"></i> Remover Legado
                                     </button>
                                 </div>
                                 
@@ -238,31 +256,42 @@
                     <tr wire:key="linha-inscricao-{{ $inscricao->id }}" class="bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800/50 transition-colors">
                         
                         <td class="px-4 py-1.5 text-center whitespace-nowrap w-12">
-                            @if($inscricao->legado)
-                                <i class="ph-fill ph-lock-key text-amber-500 text-sm" title="Registro Legado (Somente Visualização)"></i>
-                            @else
-                                <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-lista-{{ $inscricao->id }}">
-                            @endif
+                            <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-lista-{{ $inscricao->id }}">
                         </td>
                         
                         <td class="px-4 py-1.5 whitespace-nowrap min-w-[200px]">
                             <div class="flex items-center gap-3">
                                 <img src="https://ui-avatars.com/api/?name={{ urlencode($inscricao->nome) }}&background=f3f4f6&color=111827&bold=true" class="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-700 hidden sm:block shrink-0">
                                 <div class="flex flex-col">
-                                    <span class="font-bold text-gray-900 text-[13px] leading-tight dark:text-white truncate max-w-[200px]" title="{{ $inscricao->nome }}">{{ $inscricao->nome }}</span>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="font-bold text-gray-900 text-[13px] leading-tight dark:text-white truncate max-w-[185px]" title="{{ $inscricao->nome }}">{{ $inscricao->nome }}</span>
+                                        @if($inscricao->legado)
+                                            <i class="ph-fill ph-lock-key text-amber-500 text-xs shrink-0" title="Registro Legado (Somente Visualização)"></i>
+                                        @endif
+                                    </div>
                                     <span class="text-xs text-gray-500 leading-tight truncate max-w-[200px]">{{ $inscricao->email ?? $inscricao->cpf }}</span>
                                 </div>
                             </div>
                         </td>
 
                         <td class="px-4 py-1.5 text-center whitespace-nowrap">
-                            @if($inscricao->legado)
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800"
-                                    title="Registro histórico legado: bloqueado para edições e movimentações">
-                                    <i class="ph-fill ph-archive text-xs"></i> Legado
-                                </span>
+                            @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+                                <div class="inline-flex items-center justify-center gap-1.5" title="{{ $inscricao->legado ? 'Registro Legado: clique para liberar edição' : 'Clique para marcar como Legado (somente leitura)' }}">
+                                    <x-toggle :status="(bool) $inscricao->legado" action="toggleLegado({{ $inscricao->id }})" />
+                                    @if($inscricao->legado)
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800">
+                                            Legado
+                                        </span>
+                                    @endif
+                                </div>
                             @else
-                                <span class="text-xs text-gray-300 dark:text-gray-600">-</span>
+                                @if($inscricao->legado)
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800">
+                                        <i class="ph-fill ph-archive text-xs"></i> Legado
+                                    </span>
+                                @else
+                                    <span class="text-xs text-gray-300 dark:text-gray-600">-</span>
+                                @endif
                             @endif
                         </td>
 

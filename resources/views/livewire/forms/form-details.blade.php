@@ -86,8 +86,9 @@
                 </a>
                 
                 @if(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
-                    <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $formulario->id]) }}" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none">
-                        <i class="ph-bold ph-pencil-simple"></i> Editar Campos
+                    <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $formulario->id]) }}" class="btn {{ $formulario->encerrado ? 'btn--secondary bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100' : 'btn--primary bg-purpura-600 hover:bg-purpura-700 border-none' }} btn--medium">
+                        <i class="ph-bold {{ $formulario->encerrado ? 'ph-eye' : 'ph-pencil-simple' }}"></i>
+                        {{ $formulario->encerrado ? 'Ver Campos (Encerrado)' : 'Editar Campos' }}
                     </a>
                 @endif
             </div>

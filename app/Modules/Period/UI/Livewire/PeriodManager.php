@@ -480,6 +480,12 @@ class PeriodManager extends Component
     {
         //abort_if(!feature('ciclo.excluir'), 403);
         //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.excluir'), 403);
+
+        $ciclo = Ciclo::findOrFail($id);
+        if ($ciclo->encerrado) {
+            $this->dispatch('erro', msg: 'Ação Bloqueada: Este ciclo está marcado como Encerrado e permite apenas visualização.');
+            return;
+        }
         
         // Impede que um ciclo que tenha inscrições (mesmo que na lixeira) seja deletado e quebre o sistema
         $emUso = \App\Models\Inscricao::withTrashed()->where('ciclo_id', $id)->exists();
@@ -488,7 +494,7 @@ class PeriodManager extends Component
             return;
         }
 
-        Ciclo::findOrFail($id)->delete();
+        $ciclo->delete();
         
         if (($key = array_search((string)$id, $this->selecionadas)) !== false || ($key = array_search((int)$id, $this->selecionadas)) !== false) {
             unset($this->selecionadas[$key]);
@@ -508,6 +514,18 @@ class PeriodManager extends Component
         $ciclo->save();
 
         $msg = $ciclo->bloqueado ? 'Ciclo bloqueado! Inscrições congeladas para alteração direta.' : 'Ciclo desbloqueado com sucesso!';
+        $this->dispatch('sucesso', msg: $msg);
+    }
+
+    public function toggleEncerrado(int $id): void
+    {
+        $ciclo = Ciclo::findOrFail($id);
+        $ciclo->encerrado = !$ciclo->encerrado;
+        $ciclo->save();
+
+        $msg = $ciclo->encerrado
+            ? 'Ciclo encerrado! A edição das configurações do ciclo e do formulário foi bloqueada (inscrições permanecem editáveis).'
+            : 'Ciclo reaberto para edições de configuração!';
         $this->dispatch('sucesso', msg: $msg);
     }
 

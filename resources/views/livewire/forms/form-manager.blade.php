@@ -66,6 +66,22 @@
                     </div>
                 </td>
 
+                <td class="px-4 py-2.5 whitespace-nowrap text-center">
+                    @if(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
+                        <button type="button"
+                                wire:click="toggleEncerrado({{ $form->id }})"
+                                class="px-2.5 py-1 rounded border text-[10px] font-bold uppercase transition-colors inline-flex items-center gap-1 {{ $form->encerrado ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-300' : 'bg-white text-gray-500 border-gray-200 hover:text-gray-800 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400' }}"
+                                title="{{ $form->encerrado ? 'Formulário Encerrado (Somente Visualização). Clique para reabrir edições.' : 'Clique para encerrar e bloquear edições neste formulário' }}">
+                            <i class="text-xs ph-fill {{ $form->encerrado ? 'ph-archive' : 'ph-lock-key-open' }}"></i>
+                            <span>{{ $form->encerrado ? 'Encerrado' : 'Aberto' }}</span>
+                        </button>
+                    @else
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase {{ $form->encerrado ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-gray-100 text-gray-500' }}">
+                            {{ $form->encerrado ? 'Encerrado' : 'Aberto' }}
+                        </span>
+                    @endif
+                </td>
+
                 <td class="px-4 py-2.5 whitespace-nowrap">
                     @if($form->tipo === 'aprendizagem')
                         <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 uppercase">Aprendizagem</span>
@@ -139,7 +155,7 @@
                             </a>
                         @endif
                         
-                        @if(feature('formulario.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.excluir')))
+                        @if(!$form->encerrado && feature('formulario.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.excluir')))
                             <button wire:click="excluir({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Formulário" onclick="confirm('Atenção: Ao excluir o formulário, todas as respostas vinculadas a ele também serão deletadas. Deseja continuar?') || event.stopImmediatePropagation()">
                                 <i class="text-lg ph-bold ph-trash"></i>
                             </button>
@@ -149,7 +165,7 @@
             </tr>
         @empty
             <tr>
-                <td colspan="11" class="px-4 py-10 text-center text-gray-500">
+                <td colspan="12" class="px-4 py-10 text-center text-gray-500">
                     <p class="font-semibold">Nenhum formulário encontrado.</p>
                 </td>
             </tr>

@@ -1,18 +1,49 @@
 <div class="w-full relative">
+
+    @if($encerrado)
+        <div class="mb-5 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-start gap-3">
+                <i class="ph-fill ph-archive text-2xl text-amber-600 shrink-0 mt-0.5"></i>
+                <div>
+                    <h4 class="text-xs font-extrabold uppercase tracking-wider text-amber-900 dark:text-amber-300">
+                        Formulário Encerrado — Somente Visualização
+                    </h4>
+                    <p class="text-xs text-amber-800 dark:text-amber-400 mt-0.5">
+                        A edição das configurações e dos campos deste formulário está bloqueada. As respostas submetidas continuam disponíveis para consulta e exportação.
+                    </p>
+                </div>
+            </div>
+            @if($formId && feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
+                <button type="button" wire:click="toggleEncerrado" class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shrink-0 transition shadow-2xs flex items-center gap-1.5">
+                    <i class="ph-bold ph-lock-key-open"></i> Reabrir Edição
+                </button>
+            @endif
+        </div>
+    @endif
     
     <x-page-header 
         title="{{ $formId ? 'Editar Formulário Geral' : 'Novo Formulário Geral' }}" 
         icon="ph ph-list-dashes"
-        badge="Configurações">
+        badge="{{ $encerrado ? 'Encerrado (Somente Leitura)' : 'Configurações' }}">
         
         <x-slot name="actions">
-            <a href="{{ route('formularios.index') }}" wire:navigate class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm flex items-center gap-2">
-                <i class="ph-bold ph-arrow-left"></i> Voltar
-            </a>
+            <div class="flex items-center gap-2">
+                @if($formId && feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
+                    <button type="button" wire:click="toggleEncerrado" class="px-3.5 py-2 text-xs font-bold border rounded-lg transition shadow-sm flex items-center gap-1.5 {{ $encerrado ? 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100' : 'bg-white text-gray-700 hover:bg-gray-50' }}">
+                        <i class="ph-fill {{ $encerrado ? 'ph-lock-key-open' : 'ph-archive' }}"></i>
+                        {{ $encerrado ? 'Reabrir Formulário' : 'Encerrar Edição' }}
+                    </button>
+                @endif
+
+                <a href="{{ route('formularios.index') }}" wire:navigate class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm flex items-center gap-2">
+                    <i class="ph-bold ph-arrow-left"></i> Voltar
+                </a>
+            </div>
         </x-slot>
     </x-page-header>
 
-    <form wire:submit.prevent="salvar" class="space-y-8">
+    <form wire:submit.prevent="salvar" class="space-y-8 {{ $encerrado ? 'opacity-80' : '' }}">
+        <fieldset @if($encerrado) disabled @endif class="space-y-8">
         
         <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-bold border-b border-gray-100 dark:border-gray-700 pb-2 mb-4 text-gray-800 dark:text-gray-200">
@@ -190,10 +221,13 @@
             @endif
         </div>
 
-        <div class="flex justify-end pt-4 pb-10">
-            <button type="submit" class="px-8 py-3.5 bg-purpura-600 hover:bg-purpura-700 text-white font-black rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2">
-                <i class="ph-bold ph-floppy-disk text-xl"></i> Salvar e Prosseguir
-            </button>
-        </div>
+        @if(!$encerrado)
+                <div class="flex justify-end pt-4 pb-10">
+                    <button type="submit" class="px-8 py-3.5 bg-purpura-600 hover:bg-purpura-700 text-white font-black rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                        <i class="ph-bold ph-floppy-disk text-xl"></i> Salvar e Prosseguir
+                    </button>
+                </div>
+            @endif
+        </fieldset>
     </form>
 </div>
