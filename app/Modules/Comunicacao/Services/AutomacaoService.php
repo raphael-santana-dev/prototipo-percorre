@@ -65,10 +65,10 @@ class AutomacaoService
                     $inscricao->update(['student_id' => $estudante->id]);
 
                     $contextoEnvio['senha_provisoria'] = $senhaPlana;
-                    $contextoEnvio['link_login']       = url('/aluno/login');
+                    $contextoEnvio['link_login']       = url('/login');
                 } else {
                     $contextoEnvio['senha_provisoria'] = '******** (Você já possui cadastro no sistema)';
-                    $contextoEnvio['link_login']       = url('/aluno/login');
+                    $contextoEnvio['link_login']       = url('/login');
                 }
 
                 if ($inscricao->student_id) {

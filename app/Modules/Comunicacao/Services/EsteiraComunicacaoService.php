@@ -496,10 +496,10 @@ class EsteiraComunicacaoService
                 
                 // Injeta as variáveis de login no e-mail
                 $contextoEnvio['senha_provisoria'] = $senhaPlana;
-                $contextoEnvio['link_login'] = url('/aluno/login');
+                $contextoEnvio['link_login'] = url('/login');
             } else {
                 $contextoEnvio['senha_provisoria'] = '******** (Você já possui cadastro no sistema)';
-                $contextoEnvio['link_login'] = url('/aluno/login');
+                $contextoEnvio['link_login'] = url('/login');
             }
         }
 
@@ -698,10 +698,10 @@ class EsteiraComunicacaoService
                 );
                 $inscricao->update(['student_id' => $estudante->id]);
                 $contextoEnvio['senha_provisoria'] = $senhaPlana;
-                $contextoEnvio['link_login'] = url('/aluno/login');
+                $contextoEnvio['link_login'] = url('/login');
             } else {
                 $contextoEnvio['senha_provisoria'] = '******** (Você já possui cadastro no sistema)';
-                $contextoEnvio['link_login'] = url('/aluno/login');
+                $contextoEnvio['link_login'] = url('/login');
             }
         }
 

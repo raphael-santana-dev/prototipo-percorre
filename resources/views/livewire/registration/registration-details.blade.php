@@ -1,4 +1,5 @@
 <div class="p-6 max-w-[1400px] mx-auto font-sans"
+     wire:poll.5s="verificarLockInscricao"
      x-data="{ emailModal: @entangle('modalEmailAberto') }" 
      x-effect="document.body.classList.toggle('overflow-hidden', emailModal || @entangle('urlEmbedAtiva') || @entangle('modalHistoricoFormularioAberto'))">
 
@@ -16,6 +17,16 @@
         ['label' => 'Inscrições', 'url' => route('inscricoes.index') ?? '#'], 
         ['label' => 'Ficha do Candidato', 'url' => '#']
     ]" />
+
+    @if($isLockedByOther)
+        <div class="mb-4 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 flex items-center gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+            <i class="ph-fill ph-lock-key text-base text-amber-600 shrink-0"></i>
+            <span>
+                <strong>Inscrição em edição por {{ $lockOwnerName }}.</strong>
+                Alteração de dados, mudança de status e upload de documentos estão desabilitados no momento (apenas visualização).
+            </span>
+        </div>
+    @endif
 
     <x-details-card 
         title="Ficha do Candidato" 
@@ -65,13 +76,14 @@
                 </button>
 
                 @if($podeEditarAssistido)
-                    <div class="flex items-center gap-1.5 bg-gray-50 p-1 rounded-lg border border-gray-200">
-                        <select wire:model="status_selecionado" class="border-none bg-transparent rounded-md text-[11px] font-bold text-gray-700 focus:ring-0 py-1 pl-2 pr-6 cursor-pointer hover:bg-gray-100 transition-colors shadow-none">
+                    <div class="flex items-center gap-1.5 bg-gray-50 p-1 rounded-lg border border-gray-200 {{ $isLockedByOther ? 'opacity-60' : '' }}"
+                         @if($isLockedByOther) title="Desabilitado: inscrição em edição por {{ $lockOwnerName }}" @endif>
+                        <select wire:model="status_selecionado" @disabled($isLockedByOther) class="border-none bg-transparent rounded-md text-[11px] font-bold text-gray-700 focus:ring-0 py-1 pl-2 pr-6 {{ $isLockedByOther ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-gray-100' }} transition-colors shadow-none">
                             @foreach($todosStatus as $status)
                                 <option value="{{ $status->id }}">{{ $status->nome }}</option>
                             @endforeach
                         </select>
-                        <button wire:click="atualizarStatus" class="btn btn--primary btn--small !h-[28px] !px-3 !text-[10px] uppercase">
+                        <button type="button" wire:click="atualizarStatus" @disabled($isLockedByOther) class="btn btn--primary btn--small !h-[28px] !px-3 !text-[10px] uppercase disabled:opacity-50 disabled:cursor-not-allowed">
                             Mover
                         </button>
                     </div>
@@ -195,8 +207,13 @@
 
                             <div class="shrink-0 flex items-center gap-2">
                                 @if(!$modoEdicaoAssistida)
-                                    <button type="button" wire:click="iniciarEdicaoAssistida" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-xs transition flex items-center gap-1.5">
-                                        <i class="ph-bold ph-pencil-simple"></i> Editar Dados da Inscrição
+                                    <button type="button"
+                                            wire:click="iniciarEdicaoAssistida"
+                                            @disabled($isLockedByOther)
+                                            @if($isLockedByOther) title="Em edição por {{ $lockOwnerName }}" @endif
+                                            class="px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center gap-1.5 {{ $isLockedByOther ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white' }}">
+                                        <i class="ph-bold {{ $isLockedByOther ? 'ph-lock-key' : 'ph-pencil-simple' }}"></i>
+                                        {{ $isLockedByOther ? "Em edição ({$lockOwnerName})" : 'Editar Dados da Inscrição' }}
                                     </button>
                                 @else
                                     <button type="button" wire:click="cancelarEdicaoAssistida" class="px-3 py-2 bg-white border border-gray-300 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-50 transition">
@@ -886,14 +903,21 @@
                                         @endif
 
                                         @if(!empty($infoDoc['id']) && !in_array($statusDoc, ['valido_ia', 'aprovado_manual']))
-                                            <button type="button" wire:click="aprovarDocumentoManualmente({{ $doc->id }})" class="px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition inline-flex items-center gap-1">
+                                            <button type="button"
+                                                    wire:click="aprovarDocumentoManualmente({{ $doc->id }})"
+                                                    @disabled($isLockedByOther)
+                                                    class="px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
                                                 <i class="ph-bold ph-check"></i> Forçar Aprovação
                                             </button>
                                         @endif
                                     </div>
 
-                                    @if($podeEditarAssistido && $this->uploadDocumentacaoHabilitado)
-                                        <label class="px-3.5 py-2 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-lg cursor-pointer transition inline-flex items-center gap-1.5 shadow-2xs">
+                                    @if($isLockedByOther)
+                                        <button type="button" disabled class="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500 text-xs font-semibold inline-flex items-center gap-1.5 cursor-not-allowed" title="Em edição por {{ $lockOwnerName }}">
+                                            <i class="ph-fill ph-lock-key"></i> Upload bloqueado (Em edição)
+                                        </button>
+                                    @elseif($podeEditarAssistido && $this->uploadDocumentacaoHabilitado)
+                                        <label class="px-3.5 py-2 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-lg cursor-pointer transition inline-flex items-center gap-1.5">
                                             <i class="ph-bold ph-upload-simple"></i>
                                             <span wire:loading.remove wire:target="uploads.{{ $doc->id }}">
                                                 {{ !empty($infoDoc['id']) ? 'Substituir Arquivo' : 'Enviar pelo Candidato' }}
@@ -985,8 +1009,13 @@
                                                 <i class="ph-bold ph-clock-counter-clockwise"></i> Histórico
                                             </button>
                                         @endif
-                                        <button type="button" wire:click="abrirFormularioEmbedTable('{{ $form['ref'] }}', '{{ $form['id'] }}')" class="px-3.5 py-1.5 text-[11px] font-bold text-white bg-purpura-600 rounded-lg hover:bg-purpura-700 transition shadow-sm inline-flex items-center gap-1.5">
-                                            <i class="ph-bold ph-play"></i> Iniciar Preenchimento
+                                        <button type="button"
+                                                wire:click="abrirFormularioEmbedTable('{{ $form['ref'] }}', '{{ $form['id'] }}')"
+                                                @disabled($isLockedByOther)
+                                                @if($isLockedByOther) title="Em edição por {{ $lockOwnerName }}" @endif
+                                                class="px-3.5 py-1.5 text-[11px] font-bold rounded-lg transition inline-flex items-center gap-1.5 {{ $isLockedByOther ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'text-white bg-purpura-600 hover:bg-purpura-700' }}">
+                                            <i class="ph-bold {{ $isLockedByOther ? 'ph-lock-key' : 'ph-play' }}"></i>
+                                            {{ $isLockedByOther ? 'Em edição' : 'Iniciar Preenchimento' }}
                                         </button>
                                     </div>
                                 </td>

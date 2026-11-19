@@ -21,6 +21,8 @@ use App\Modules\Matricula\Domain\Models\DocumentoExigido;
 use App\Modules\Matricula\Domain\Models\DocumentoMatricula;
 use App\Modules\Matricula\Services\AiValidationService;
 use App\Traits\ComPadraoListagem;
+use App\Traits\WithEditingLock;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Crypt;
@@ -33,6 +35,7 @@ class RegistrationDetails extends Component
     use WithFileUploads;
     use WithPagination;
     use ComPadraoListagem;
+    use WithEditingLock;
     use \App\Traits\WithFichaPdfDownload;
 
     public Inscricao $inscricao;
@@ -79,6 +82,7 @@ class RegistrationDetails extends Component
         
         $this->carregarDadosEdicao();
         $this->carregarStatusArquivos();
+        $this->verificarLockInscricao();
 
         // Inicialização das variáveis herdadas da trait ComPadraoListagem para a Tabela de Formulários
         $this->ordenacaoCampo = 'total_preenchimentos';
@@ -86,6 +90,53 @@ class RegistrationDetails extends Component
         $this->porPagina = 10;
         $this->permiteGrid = false;
         $this->modoExibicao = 'lista';
+    }
+
+    /**
+     * Verifica em tempo real (wire:poll.5s) se outro usuário está atualizando esta inscrição.
+     * Só renova/adquire o lock se o usuário atual estiver efetivamente editando.
+     */
+    public function verificarLockInscricao(): void
+    {
+        $lockKey = $this->getLockKey('inscricao', (int) $this->inscricao->id);
+        $currentLock = Cache::get($lockKey);
+        $meuId = (int) auth()->id();
+
+        $estouEditandoAgora = $this->modoEdicaoAssistida || !empty($this->urlEmbedAtiva);
+
+        if ($currentLock && (int) ($currentLock['user_id'] ?? 0) !== $meuId && ($currentLock['expires_at'] ?? 0) > now()->timestamp) {
+            $this->isLockedByOther = true;
+            $this->lockOwnerName   = (string) ($currentLock['user_name'] ?? 'Outro usuário');
+            $this->lockOwnerId     = (int) ($currentLock['user_id'] ?? 0);
+
+            if ($this->modoEdicaoAssistida) {
+                $this->modoEdicaoAssistida = false;
+            }
+            return;
+        }
+
+        $this->isLockedByOther = false;
+        $this->lockOwnerName   = '';
+        $this->lockOwnerId     = null;
+
+        if ($estouEditandoAgora) {
+            $this->iniciarLockEdicao('inscricao', (int) $this->inscricao->id, 'Dados da Inscrição', 'inscricoes.index');
+        } elseif ($currentLock && (int) ($currentLock['user_id'] ?? 0) === $meuId) {
+            Cache::forget($lockKey);
+            Cache::forget($this->getTransferKey('inscricao', (int) $this->inscricao->id));
+        }
+    }
+
+    protected function bloquearSeEmEdicaoPorOutro(): bool
+    {
+        $this->verificarLockInscricao();
+
+        if ($this->isLockedByOther) {
+            $this->dispatch('erro', msg: "Esta inscrição está em edição por {$this->lockOwnerName}. Apenas visualização está permitida no momento.");
+            return true;
+        }
+
+        return false;
     }
 
     public function updatingSearchFormulario()
@@ -154,13 +205,20 @@ class RegistrationDetails extends Component
     public function iniciarEdicaoAssistida(): void
     {
         abort_unless($this->usuarioPodeEditarAssistido(), 403, 'Sem permissão para edição assistida.');
+
+        if ($this->bloquearSeEmEdicaoPorOutro()) {
+            return;
+        }
+
         $this->carregarDadosEdicao();
         $this->modoEdicaoAssistida = true;
+        $this->iniciarLockEdicao('inscricao', (int) $this->inscricao->id, 'Dados da Inscrição', 'inscricoes.index');
     }
 
     public function cancelarEdicaoAssistida(): void
     {
         $this->modoEdicaoAssistida = false;
+        $this->liberarLockEdicao();
         $this->carregarDadosEdicao();
     }
 
@@ -179,6 +237,10 @@ class RegistrationDetails extends Component
     public function salvarEdicaoAssistida(): void
     {
         abort_unless($this->usuarioPodeEditarAssistido(), 403, 'Sem permissão.');
+
+        if ($this->bloquearSeEmEdicaoPorOutro()) {
+            return;
+        }
 
         $this->validate([
             'formFixo.nome'  => 'required|string|min:3',
@@ -297,6 +359,7 @@ class RegistrationDetails extends Component
 
         $this->inscricao->refresh();
         $this->modoEdicaoAssistida = false;
+        $this->liberarLockEdicao();
         unset($this->logsMovimentacao);
 
         $this->dispatch('sucesso', msg: 'Dados da inscrição atualizados com sucesso pelo Participante!');
@@ -384,6 +447,11 @@ class RegistrationDetails extends Component
     public function updatedUploads($value, $documentoExigidoId): void
     {
         abort_unless($this->usuarioPodeEditarAssistido(), 403, 'Sem permissão.');
+
+        if ($this->bloquearSeEmEdicaoPorOutro()) {
+            unset($this->uploads[$documentoExigidoId]);
+            return;
+        }
 
         if (!$this->uploadDocumentacaoHabilitado) {
             unset($this->uploads[$documentoExigidoId]);
@@ -483,6 +551,10 @@ class RegistrationDetails extends Component
     public function aprovarDocumentoManualmente(int $documentoExigidoId): void
     {
         abort_unless($this->usuarioPodeEditarAssistido(), 403);
+
+        if ($this->bloquearSeEmEdicaoPorOutro()) {
+            return;
+        }
 
         $docMatricula = DocumentoMatricula::where('inscricao_id', $this->inscricao->id)
             ->where('documento_exigido_id', $documentoExigidoId)
@@ -625,6 +697,10 @@ class RegistrationDetails extends Component
     {
         abort_unless($this->usuarioPodeEditarAssistido(), 403);
 
+        if ($this->bloquearSeEmEdicaoPorOutro()) {
+            return;
+        }
+
         $participante = auth()->user();
 
         if ($this->tipoFormularioEmbed === 'inscricao') {
@@ -707,6 +783,7 @@ class RegistrationDetails extends Component
             'navegador'       => request()->userAgent(),
         ]);
 
+        $this->iniciarLockEdicao('inscricao', (int) $this->inscricao->id, 'Formulário Assistido', 'inscricoes.index');
         unset($this->logsMovimentacao);
     }
 
@@ -714,6 +791,7 @@ class RegistrationDetails extends Component
     {
         $this->urlEmbedAtiva = null;
         $this->tituloEmbedAtivo = '';
+        $this->liberarLockEdicao();
         $this->inscricao->refresh();
         $this->carregarDadosEdicao();
     }
@@ -874,6 +952,11 @@ class RegistrationDetails extends Component
 
     public function atualizarStatus()
     {
+        if ($this->bloquearSeEmEdicaoPorOutro()) {
+            $this->status_selecionado = $this->inscricao->status_inscricao_id;
+            return;
+        }
+
         if ($this->inscricao->status_inscricao_id == $this->status_selecionado) {
             $this->dispatch('erro', msg: 'O candidato já se encontra neste status!');
             return;
@@ -918,6 +1001,12 @@ class RegistrationDetails extends Component
 
     public function executarMudancaStatusFinal()
     {
+        if ($this->bloquearSeEmEdicaoPorOutro()) {
+            $this->modalAntiSpamAberto = false;
+            $this->status_selecionado = $this->inscricao->status_inscricao_id;
+            return;
+        }
+
         $statusNovo = StatusInscricao::find($this->status_selecionado);
 
         $this->inscricao->status_inscricao_id = $statusNovo->id;
