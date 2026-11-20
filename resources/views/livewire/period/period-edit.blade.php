@@ -174,7 +174,7 @@
                         <input type="checkbox" wire:model="liberar_acesso_estudante" id="liberar_acesso_estudante" class="w-4 h-4 mt-0.5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
                         <label for="liberar_acesso_estudante" class="block ml-2 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
                             <span class="font-bold text-gray-900 dark:text-white">Liberar acesso ao Portal do Estudante ao finalizar a inscrição:</span>
-                            Cria/ativa automaticamente a conta do candidato (guard <code class="font-mono">student</code>) assim que ele concluir a última etapa do formulário.
+                            Cria/ativa automaticamente a conta do candidato assim que ele concluir a última etapa do formulário.
                         </label>
                     </div>
                 </div>

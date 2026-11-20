@@ -17,6 +17,7 @@ use App\Models\SystemTask;
 use App\Modules\Unidade\Domain\Models\Unidade;
 use App\Modules\Turno\Domain\Models\Turno;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Renderless;
 
 #[Layout('components.layouts.app')]
 #[Title('Fluxo de Inscrição')]
@@ -49,7 +50,7 @@ class KanbanBoard extends Component
 
     public function abrirModalLaudoPcd(int $inscricaoId): void
     {
-        $insc = Inscricao::findOrFail($inscricaoId);
+        $insc = Inscricao::apenasVinculosPermitidos()->findOrFail($inscricaoId);
         $dinamicos = is_string($insc->dados_dinamicos)
             ? (json_decode($insc->dados_dinamicos, true) ?: [])
             : ($insc->dados_dinamicos ?? []);
@@ -322,7 +323,14 @@ class KanbanBoard extends Component
     {
         //abort_if(!feature('inscricao.editar'), 403);
 
-        $inscricao = Inscricao::with(['curso', 'ciclo.statusPipeline'])->find($id);
+        $inscricao = Inscricao::apenasVinculosPermitidos()
+            ->with(['curso', 'ciclo.statusPipeline'])
+            ->find($id);
+
+        if (!$inscricao) {
+            $this->dispatch('erro', msg: 'Inscrição não encontrada ou sem permissão de acesso.');
+            return;
+        }
 
         if ($inscricao->legado) {
             $this->dispatch('erro', msg: 'Ação bloqueada: Inscrições marcadas como Legado não podem ser movidas.');
@@ -428,7 +436,14 @@ class KanbanBoard extends Component
     #[On('quick-change-status-crm')]
     public function quickChangeStatus($id, $status)
     {
-        $inscricao = Inscricao::with(['curso', 'ciclo.statusPipeline'])->find($id);
+        $inscricao = Inscricao::apenasVinculosPermitidos()
+            ->with(['curso', 'ciclo.statusPipeline'])
+            ->find($id);
+
+        if (!$inscricao) {
+            $this->dispatch('erro', msg: 'Inscrição não encontrada ou sem permissão de acesso.');
+            return;
+        }
 
         if ($inscricao->legado) {
             $this->dispatch('erro', msg: 'Ação bloqueada: Inscrições marcadas como Legado não podem ser movidas.');
@@ -462,7 +477,8 @@ class KanbanBoard extends Component
 
         $statusDestinoId = (int) $this->statusDestinoLote;
 
-        $inscricoesValidas = Inscricao::with(['curso', 'ciclo.statusPipeline'])
+        $inscricoesValidas = Inscricao::apenasVinculosPermitidos()
+            ->with(['curso', 'ciclo.statusPipeline'])
             ->whereIn('id', $this->selecionados)
             ->where('status_inscricao_id', '!=', $statusDestinoId)
             ->where('legado', false)
@@ -492,9 +508,10 @@ class KanbanBoard extends Component
     }
 
     #[On('open-regras-crm')]
+    #[Renderless]
     public function abrirRegras(int $id)
     {
-        $inscricao = Inscricao::with('ciclo')->find($id);
+        $inscricao = Inscricao::apenasVinculosPermitidos()->with('ciclo')->find($id);
         if (!$inscricao || !$inscricao->ciclo) return;
 
         $regrasRaw = is_string($inscricao->ciclo->regras_pontuacao)
@@ -514,8 +531,9 @@ class KanbanBoard extends Component
         $html = '<div class="space-y-6">';
         foreach ($agrupadas as $campo => $regras) {
             $nomeCampoFormatado = str_replace('_', ' ', strtoupper($campo));
+            $nomeCampoHtml = e($nomeCampoFormatado);
             $html .= "<div class='bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm'>";
-            $html .= "<h4 class='text-xs font-bold text-gray-500 mb-3 tracking-wider flex items-center gap-2'><i class='ph-fill ph-check-square-offset text-purpura-500'></i> {$nomeCampoFormatado}</h4>";
+            $html .= "<h4 class='text-xs font-bold text-gray-500 mb-3 tracking-wider flex items-center gap-2'><i class='ph-fill ph-check-square-offset text-purpura-500'></i> {$nomeCampoHtml}</h4>";
             $html .= "<div class='space-y-2'>";
 
             foreach ($regras as $regra) {
@@ -538,6 +556,7 @@ class KanbanBoard extends Component
                 };
 
                 $pontosStr = $tipo === 'multiplicador_percentual' ? "+{$pontos}%" : "+{$pontos} pts";
+                $condicaoHtml = e($condicaoStr);
 
                 $atendida = false;
                 foreach ($auditoria as $aud) {
@@ -583,7 +602,7 @@ class KanbanBoard extends Component
                 $html .= "<div class='flex items-center justify-between p-3 rounded-lg border {$bgClass}'>";
                 $html .= "<div class='flex items-center gap-3'>";
                 $html .= $icon;
-                $html .= "<span class='block text-sm font-bold {$textColor}'>{$condicaoStr}</span>";
+                $html .= "<span class='block text-sm font-bold {$textColor}'>{$condicaoHtml}</span>";
                 $html .= "</div>";
                 $html .= "<span class='font-black text-[10px] {$ptsColor}'>{$pontosStr}</span>";
                 $html .= "</div>";
@@ -608,24 +627,32 @@ class KanbanBoard extends Component
         ]);
     }
 
+    #[Renderless]
     public function showContactInfo(int $id)
     {
-        $inscricao = Inscricao::findOrFail($id);
-        
-        $html = '<div class="space-y-5">';
-        $html .= '<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700"><span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">E-mail</span><span class="block text-sm font-bold text-gray-900 dark:text-gray-100">'.($inscricao->email ?? 'Não informado').'</span></div>';
-        $html .= '<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700"><span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Celular / Telefone</span><span class="block text-sm font-bold text-gray-900 dark:text-gray-100">'.($inscricao->celular ?? 'Não informado').'</span></div>';
-        
-        $endereco = collect([$inscricao->logradouro, $inscricao->numero, $inscricao->complemento, $inscricao->bairro, $inscricao->cidade, $inscricao->estado, $inscricao->cep])->filter()->implode(', ');
-        $html .= '<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700"><span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Endereço Completo</span><span class="block text-sm font-bold text-gray-900 dark:text-gray-100">'.($endereco ?: 'Não preenchido').'</span></div>';
-        
+        $inscricao = Inscricao::apenasVinculosPermitidos()->findOrFail($id);
+
+        $email   = e($inscricao->email ?: 'Não informado');
+        $celular = e($inscricao->celular ?: 'Não informado');
+
+        $endereco = collect([
+            $inscricao->logradouro, $inscricao->numero, $inscricao->complemento,
+            $inscricao->bairro, $inscricao->cidade, $inscricao->estado, $inscricao->cep,
+        ])->filter()->implode(', ');
+        $enderecoHtml = e($endereco ?: 'Não preenchido');
+
+        $html  = '<div class="space-y-5">';
+        $html .= '<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700"><span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">E-mail</span><span class="block text-sm font-bold text-gray-900 dark:text-gray-100">'.$email.'</span></div>';
+        $html .= '<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700"><span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Celular / Telefone</span><span class="block text-sm font-bold text-gray-900 dark:text-gray-100">'.$celular.'</span></div>';
+        $html .= '<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700"><span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Endereço Completo</span><span class="block text-sm font-bold text-gray-900 dark:text-gray-100">'.$enderecoHtml.'</span></div>';
+
         if ($inscricao->nome_responsavel) {
             $html .= '<div class="pt-2 border-t border-gray-200 dark:border-gray-700">';
-            $html .= '<div class="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-100 dark:border-blue-800 mb-3"><span class="block text-[10px] font-bold text-blue-500 uppercase mb-1">Nome do Responsável</span><span class="block text-sm font-bold text-blue-900 dark:text-blue-100">'.($inscricao->nome_responsavel).'</span></div>';
-            $html .= '<div class="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-100 dark:border-blue-800"><span class="block text-[10px] font-bold text-blue-500 uppercase mb-1">Contato do Responsável</span><span class="block text-sm font-bold text-blue-900 dark:text-blue-100">'.($inscricao->telefone_responsavel ?? 'Não preenchido').'</span></div>';
+            $html .= '<div class="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-100 dark:border-blue-800 mb-3"><span class="block text-[10px] font-bold text-blue-500 uppercase mb-1">Nome do Responsável</span><span class="block text-sm font-bold text-blue-900 dark:text-blue-100">'.e($inscricao->nome_responsavel).'</span></div>';
+            $html .= '<div class="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-100 dark:border-blue-800"><span class="block text-[10px] font-bold text-blue-500 uppercase mb-1">Contato do Responsável</span><span class="block text-sm font-bold text-blue-900 dark:text-blue-100">'.e($inscricao->telefone_responsavel ?: 'Não preenchido').'</span></div>';
             $html .= '</div>';
         }
-        
+
         $html .= '</div>';
 
         $this->dispatch('load-quick-view', [
@@ -633,61 +660,67 @@ class KanbanBoard extends Component
             'subtitle' => $inscricao->nome . ' • CPF: ' . $inscricao->cpf,
             'icon' => 'ph-address-book',
             'data' => [
-                'Informações Pessoais' => $html
-            ]
+                'Informações Pessoais' => $html,
+            ],
         ]);
     }
 
+    #[Renderless]
     public function showQuickView(int $id)
     {
-        $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])->findOrFail($id);
+        $inscricao = Inscricao::apenasVinculosPermitidos()
+            ->with(['curso', 'unidade', 'turno', 'statusInscricao'])
+            ->findOrFail($id);
+
         $statusDisponiveis = StatusInscricao::orderBy('nome')->get();
-        
+
         $botoesAcao = '<div class="flex flex-wrap gap-2 mt-2">';
         foreach ($statusDisponiveis as $st) {
-            $corClass = $st->id == $inscricao->status_inscricao_id 
-                        ? 'bg-purpura-500 text-white border-purpura-500' 
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700';
-            $botoesAcao .= '<button @click="$dispatch(\'quick-change-status-crm\', { id: '.$id.', status: '.$st->id.' })" class="px-3 py-1.5 text-[11px] uppercase font-bold border rounded shadow-sm transition-colors '.$corClass.'">'.$st->nome.'</button>';
+            $corClass = $st->id == $inscricao->status_inscricao_id
+                ? 'bg-purpura-500 text-white border-purpura-500'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700';
+            $botoesAcao .= '<button type="button" @click="$dispatch(\'quick-change-status-crm\', { id: '.(int) $inscricao->id.', status: '.(int) $st->id.' })" class="px-3 py-1.5 text-[11px] uppercase font-bold border rounded shadow-sm transition-colors '.$corClass.'">'.e($st->nome).'</button>';
         }
         $botoesAcao .= '</div>';
+
+        $renderValor = function ($v) {
+            if (is_string($v) && (str_starts_with($v, 'inscricoes/') || str_starts_with($v, 'formularios/') || str_starts_with($v, 'pre_inscricoes/') || preg_match('/\.(pdf|jpg|jpeg|png|webp|mp4|mov|docx?|xlsx?)$/i', $v))) {
+                $url = e(asset('storage/' . $v));
+                $nomeArquivo = e(basename($v));
+                $isImagem = preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $v);
+
+                if ($isImagem) {
+                    return '<div class="flex items-center gap-2 mt-1"><img src="'.$url.'" loading="lazy" class="w-10 h-10 rounded object-cover border border-gray-200 shrink-0"><a href="'.$url.'" target="_blank" rel="noopener" class="text-purpura-600 hover:underline font-bold text-xs truncate max-w-[180px]">'.$nomeArquivo.' ↗</a></div>';
+                }
+                return '<a href="'.$url.'" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-purpura-600 hover:underline font-bold text-xs mt-1"><i class="ph ph-file-text text-base"></i> '.$nomeArquivo.' ↗</a>';
+            }
+            return e((string) $v);
+        };
 
         $detalhesDinamicos = '';
         if ($inscricao->dados_dinamicos && is_array($inscricao->dados_dinamicos)) {
             $detalhesDinamicos .= '<div class="mt-2 grid grid-cols-1 gap-2">';
-            
-            $renderValor = function($v) {
-                if (is_string($v) && (str_starts_with($v, 'inscricoes/') || str_starts_with($v, 'formularios/') || str_starts_with($v, 'pre_inscricoes/') || preg_match('/\.(pdf|jpg|jpeg|png|webp|mp4|mov|docx?|xlsx?)$/i', $v))) {
-                    $url = asset('storage/' . $v);
-                    $nomeArquivo = basename($v);
-                    $isImagem = preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $v);
-                    
-                    if ($isImagem) {
-                        return '<div class="flex items-center gap-2 mt-1"><img src="'.$url.'" class="w-10 h-10 rounded object-cover border border-gray-200 shrink-0"><a href="'.$url.'" target="_blank" class="text-purpura-600 hover:underline font-bold text-xs truncate max-w-[180px]">'.$nomeArquivo.' ↗</a></div>';
-                    }
-                    return '<a href="'.$url.'" target="_blank" class="inline-flex items-center gap-1.5 text-purpura-600 hover:underline font-bold text-xs mt-1"><i class="ph ph-file-text text-base"></i> '.$nomeArquivo.' ↗</a>';
-                }
-                return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
-            };
-
             foreach ($inscricao->dados_dinamicos as $chave => $valor) {
-                $htmlConteudo = '';
-                if (is_array($valor)) {
-                    $itens = array_map($renderValor, $valor);
-                    $htmlConteudo = '<div class="flex flex-col gap-1">' . implode('', $itens) . '</div>';
-                } else {
-                    $htmlConteudo = $renderValor($valor);
-                }
+                $htmlConteudo = is_array($valor)
+                    ? '<div class="flex flex-col gap-1">'.implode('', array_map($renderValor, $valor)).'</div>'
+                    : $renderValor($valor);
 
                 $detalhesDinamicos .= '<div class="bg-gray-50 dark:bg-gray-800 p-2.5 rounded border border-gray-100 dark:border-gray-700">'
-                    . '<span class="block text-[10px] uppercase text-gray-500 font-bold mb-0.5">' . str_replace('_', ' ', $chave) . '</span>'
-                    . '<span class="text-sm font-medium text-gray-900 dark:text-gray-200">' . ($htmlConteudo ?: '-') . '</span>'
-                    . '</div>';
+                    .'<span class="block text-[10px] uppercase text-gray-500 font-bold mb-0.5">'.e(str_replace('_', ' ', (string) $chave)).'</span>'
+                    .'<span class="text-sm font-medium text-gray-900 dark:text-gray-200">'.($htmlConteudo ?: '-').'</span>'
+                    .'</div>';
             }
             $detalhesDinamicos .= '</div>';
         } else {
             $detalhesDinamicos = '<span class="text-gray-500 text-sm italic">Nenhum dado complementar registrado.</span>';
         }
+
+        $acoes = '<div class="flex flex-col gap-2 mt-2">'
+            .'<button type="button" @click="$dispatch(\'open-regras-crm\', { id: '.(int) $inscricao->id.' })" class="w-full text-left text-[11px] font-bold text-purpura-600 hover:text-purpura-800 bg-purpura-50 hover:bg-purpura-100 border border-purpura-200 px-3 py-2 rounded transition-colors uppercase tracking-wider inline-flex items-center gap-1.5 shadow-sm">'
+            .'<i class="ph-bold ph-list-numbers text-sm"></i> Visualizar Acertos (Mapa de Regras)</button>'
+            .'<a href="'.e(route('inscricoes.show', $inscricao->id)).'" target="_blank" rel="noopener" class="w-full text-left text-[11px] font-bold text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 rounded transition-colors uppercase tracking-wider inline-flex items-center gap-1.5 shadow-sm">'
+            .'<i class="ph-bold ph-arrow-square-out text-sm"></i> Ficha Completa &amp; Auditoria</a>'
+            .'</div>';
 
         $this->dispatch('load-quick-view', [
             'title' => $inscricao->nome,
@@ -695,18 +728,10 @@ class KanbanBoard extends Component
             'icon' => 'ph-user-focus',
             'data' => [
                 'Status' => $botoesAcao,
-                'Interesse' => '<div class="text-sm"><b>Unidade:</b> '.($inscricao->unidade->nome ?? '-').'<br><b>Curso:</b> '.($inscricao->curso->nome ?? '-').'</div>',
+                'Interesse' => '<div class="text-sm"><b>Unidade:</b> '.e($inscricao->unidade->nome ?? '-').'<br><b>Curso:</b> '.e($inscricao->curso->nome ?? '-').'</div>',
                 'Informações do Formulário' => $detalhesDinamicos,
-                'Ações' => '
-                    <div class="flex flex-col gap-2 mt-2">
-                        <button @click="$dispatch(\'open-regras-crm\', { id: '.$id.' })" class="w-full text-left text-[11px] font-bold text-purpura-600 hover:text-purpura-800 bg-purpura-50 hover:bg-purpura-100 border border-purpura-200 px-3 py-2 rounded transition-colors uppercase tracking-wider inline-flex items-center gap-1.5 shadow-sm">
-                            <i class="ph-bold ph-list-numbers text-sm"></i> Visualizar Acertos (Mapa de Regras)
-                        </button>
-                        <a href="'.route('inscricoes.show', $inscricao->id).'" target="_blank" class="w-full text-left text-[11px] font-bold text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 rounded transition-colors uppercase tracking-wider inline-flex items-center gap-1.5 shadow-sm">
-                            <i class="ph-bold ph-arrow-square-out text-sm"></i> Ficha Completa & Auditoria
-                        </a>
-                    </div>'
-            ]
+                'Ações' => $acoes,
+            ],
         ]);
     }
 

@@ -1,4 +1,4 @@
-<div class="w-full relative space-y-6 font-sans">
+<div class="w-full relative space-y-6 font-sans" wire:poll.8s>
     
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 dark:border-gray-800 pb-4">
         <div>
@@ -71,6 +71,9 @@
 
         <div class="divide-y divide-gray-100 dark:divide-gray-800">
             @forelse($formulariosList ?? [] as $formItem)
+                @php
+                    $locksFormHub = \App\Traits\WithEditingLock::obterLocksAtivos($formItem->id, ['formulario' => 'Formulário']);
+                @endphp
                 <div wire:key="hub-form-{{ $formItem->id }}" class="p-4 sm:px-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition">
                     <div class="space-y-1 min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
@@ -83,6 +86,11 @@
                             <span class="text-[11px] text-gray-500 dark:text-gray-400">
                                 {{ $formItem->tipo === 'aprendizagem' ? 'Aprendizagem' : 'Formulário Público' }}
                             </span>
+                            @if(count($locksFormHub) > 0)
+                                <x-editing-lock-badge
+                                    :id="$formItem->id"
+                                    :tipos="['formulario' => 'Formulário']" />
+                            @endif
                         </div>
                         <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
                             @if($formItem->tipo === 'aprendizagem')
@@ -143,15 +151,31 @@
                 </div>
                 <div class="divide-y divide-gray-100 dark:divide-gray-800 overflow-y-auto">
                     @forelse($ciclos as $ciclo)
+                        @php
+                            $locksCicloHub = \App\Traits\WithEditingLock::obterLocksAtivos($ciclo->id, [
+                                'ciclo'        => 'Formulário',
+                                'ciclo_dados'  => 'Ciclo',
+                                'ciclo_regras' => 'Regras',
+                            ]);
+                        @endphp
                         <button type="button" wire:click="selecionarCicloSeletivo({{ $ciclo->id }})" class="w-full text-left px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition flex justify-between items-center gap-3">
-                            <div class="min-w-0">
-                                <div class="font-medium text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                            <div class="min-w-0 space-y-1">
+                                <div class="font-medium text-sm text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
                                     <span class="truncate">{{ $ciclo->nome }}</span>
                                     @if(($ciclo->tipo_ciclo ?? 'regular') === 'customizado')
                                         <span class="px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded shrink-0">Projeto</span>
                                     @endif
+                                    @if(count($locksCicloHub) > 0)
+                                        <x-editing-lock-badge
+                                            :id="$ciclo->id"
+                                            :tipos="[
+                                                'ciclo'        => 'Formulário',
+                                                'ciclo_dados'  => 'Ciclo',
+                                                'ciclo_regras' => 'Regras',
+                                            ]" />
+                                    @endif
                                 </div>
-                                <div class="text-xs text-gray-500 mt-0.5">{{ $ciclo->ano }}.{{ $ciclo->semestre }}</div>
+                                <div class="text-xs text-gray-500">{{ $ciclo->ano }}.{{ $ciclo->semestre }}</div>
                             </div>
                             <i class="ph ph-caret-right text-gray-400 shrink-0"></i>
                         </button>

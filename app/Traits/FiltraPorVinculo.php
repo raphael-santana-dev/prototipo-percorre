@@ -18,15 +18,13 @@ trait FiltraPorVinculo
             return $query;
         }
 
-        $combinacoes = method_exists($user, 'obterCombinacoesVinculoAtivas')
-            ? $user->obterCombinacoesVinculoAtivas()
-            : [];
+        $combinacoes = $this->combinacoesVinculoDoUsuario($user);
 
         // Se possui combinações exatas cadastradas na tabela user_vinculos_academicos
         if (!empty($combinacoes)) {
-            $temUnidade = Schema::hasColumn($tabela, 'unidade_id');
-            $temCurso   = Schema::hasColumn($tabela, 'curso_id');
-            $temTurno   = Schema::hasColumn($tabela, 'turno_id');
+            $temUnidade = self::tabelaTemColuna($tabela, 'unidade_id');
+            $temCurso   = self::tabelaTemColuna($tabela, 'curso_id');
+            $temTurno   = self::tabelaTemColuna($tabela, 'turno_id');
 
             // Caso 1: Tabelas com a trinca completa (ex: inscricoes, ofertas_vagas)
             if ($temUnidade && $temCurso && $temTurno) {
@@ -78,5 +76,36 @@ trait FiltraPorVinculo
         }
 
         return $query;
+    }
+
+    /**
+     * Memoriza as combinações do usuário por instância de usuário.
+     * WeakMap: o cache vive só enquanto o objeto User existir (uma requisição normal),
+     * então é seguro também em workers de longa duração (Octane).
+     */
+    protected function combinacoesVinculoDoUsuario($user): array
+    {
+        static $memo = null;
+        $memo ??= new \WeakMap();
+
+        if (!isset($memo[$user])) {
+            $memo[$user] = method_exists($user, 'obterCombinacoesVinculoAtivas')
+                ? (array) $user->obterCombinacoesVinculoAtivas()
+                : [];
+        }
+
+        return $memo[$user];
+    }
+
+    /**
+     * Cacheia a existência de colunas por tabela. O schema não muda durante uma requisição,
+     * e Schema::hasColumn consulta o information_schema a cada chamada.
+     */
+    protected static function tabelaTemColuna(string $tabela, string $coluna): bool
+    {
+        static $cache = [];
+        $chave = $tabela . '.' . $coluna;
+
+        return $cache[$chave] ??= Schema::hasColumn($tabela, $coluna);
     }
 }

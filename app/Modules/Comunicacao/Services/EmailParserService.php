@@ -213,7 +213,7 @@ class EmailParserService
                 return (string) ($dadosExtras['link_painel'] ?? url('/solicitacoes'));
 
             case 'link_login':
-                return (string) ($dadosExtras['link_login'] ?? url('/aluno/login'));
+                return (string) ($dadosExtras['link_login'] ?? url('/login'));
 
             case 'link_matricula':
             case 'link_matricula_url':
@@ -380,7 +380,7 @@ class EmailParserService
         $urlPainel  = $dadosExtras['link_painel'] ?? url('/solicitacoes');
         $linkPainel = '<a href="' . $urlPainel . '" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#374151;color:#ffffff;font-family:sans-serif;font-size:14px;font-weight:bold;padding:10px 25px;border-radius:6px;text-decoration:none;">Acessar Painel Central</a>';
 
-        $urlLogin  = $dadosExtras['link_login'] ?? url('/aluno/login');
+        $urlLogin  = $dadosExtras['link_login'] ?? url('/login');
         $linkLogin = '<a href="' . $urlLogin . '" target="_blank" rel="noopener noreferrer" style="color:#7c3aed;font-weight:bold;text-decoration:underline;word-break:break-all;">' . $urlLogin . '</a>';
 
         $modeloEnsino = $inscricao->dados_dinamicos['modelo'] ?? 'Presencial';
