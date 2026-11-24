@@ -534,11 +534,28 @@
                                         </div>
                                     </div>
 
-                                    <div class="flex items-center pt-3 border-t border-gray-100 dark:border-gray-700">
-                                        <input type="checkbox" wire:model="status" id="status" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
-                                        <label for="status" class="block ml-2 text-xs font-medium text-gray-900 dark:text-gray-300 cursor-pointer">
-                                            Ativar este ciclo imediatamente {{ $tipo_ciclo === 'regular' ? '(desativará outro ciclo regular ativo)' : '(projetos customizados não desativam o ciclo regular)' }}
-                                        </label>
+                                    <div class="space-y-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                        <div class="flex items-center">
+                                            <input type="checkbox" wire:model="status" id="status" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
+                                            <label for="status" class="block ml-2 text-xs font-medium text-gray-900 dark:text-gray-300 cursor-pointer">
+                                                Ativar este ciclo imediatamente {{ $tipo_ciclo === 'regular' ? '(desativará outro ciclo regular ativo)' : '(projetos customizados não desativam o ciclo regular)' }}
+                                            </label>
+                                        </div>
+
+                                        <div class="p-3.5 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div>
+                                                <span class="block text-xs font-semibold text-gray-900 dark:text-white">
+                                                    Criar acesso ao concluir o formulário
+                                                </span>
+                                                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                                    Cria e ativa automaticamente o acesso do estudante ao concluir o formulário ou a 1ª fase.
+                                                </p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                                <input type="checkbox" wire:model.live="liberar_acesso_estudante" class="sr-only peer">
+                                                <div class="w-9 h-5 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:bg-purpura-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             @endif
@@ -735,23 +752,44 @@
                                         </button>
                                     </div>
 
-                                    <div class="p-3.5 rounded-lg bg-purpura-50/50 dark:bg-purpura-900/20 border border-purpura-200 dark:border-purpura-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                        <div>
-                                            <label class="block text-xs font-bold text-purpura-900 dark:text-purpura-200">
-                                                Status da Inscrição que Habilita o Upload
-                                            </label>
-                                            <p class="text-[11px] text-gray-500 dark:text-gray-400">
-                                                O envio dos documentos será liberado quando o candidato atingir este status.
-                                            </p>
+                                    <div class="space-y-3">
+                                        <div class="p-3.5 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div>
+                                                <label class="block text-xs font-semibold text-gray-900 dark:text-white">
+                                                    Status da Inscrição que Habilita o Upload
+                                                </label>
+                                                <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                                                    O envio dos documentos será liberado quando o candidato atingir este status.
+                                                </p>
+                                            </div>
+                                            <select wire:model="status_documentacao_id" class="w-full sm:w-64 text-xs font-medium rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white py-2">
+                                                <option value="">Selecione o status...</option>
+                                                @foreach($statusDisponiveis as $stDoc)
+                                                    @if(empty($statusSelecionados) || in_array((string) $stDoc->id, $statusSelecionados, true))
+                                                        <option value="{{ $stDoc->id }}">{{ $stDoc->nome }}</option>
+                                                    @endif
+                                                @endforeach
+                                            </select>
                                         </div>
-                                        <select wire:model="status_documentacao_id" class="w-full sm:w-64 text-xs font-semibold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white py-2">
-                                            <option value="">Selecione o status...</option>
-                                            @foreach($statusDisponiveis as $stDoc)
-                                                @if(empty($statusSelecionados) || in_array((string) $stDoc->id, $statusSelecionados, true))
-                                                    <option value="{{ $stDoc->id }}">{{ $stDoc->nome }}</option>
-                                                @endif
-                                            @endforeach
-                                        </select>
+
+                                        <div class="p-3.5 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div>
+                                                <label class="block text-xs font-semibold text-gray-900 dark:text-white">
+                                                    Status da Inscrição que Cria o Acesso do Estudante
+                                                </label>
+                                                <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                                                    Ao mover a inscrição para este status, o acesso ao Portal do Estudante é criado automaticamente.
+                                                </p>
+                                            </div>
+                                            <select wire:model="status_acesso_estudante_id" class="w-full sm:w-64 text-xs font-medium rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white py-2">
+                                                <option value="">Nenhum (não criar por status)</option>
+                                                @foreach($statusDisponiveis as $stAcesso)
+                                                    @if(empty($statusSelecionados) || in_array((string) $stAcesso->id, $statusSelecionados, true))
+                                                        <option value="{{ $stAcesso->id }}">{{ $stAcesso->nome }}</option>
+                                                    @endif
+                                                @endforeach
+                                            </select>
+                                        </div>
                                     </div>
 
                                     <div class="space-y-2.5">

@@ -71,6 +71,33 @@ class Inscricao extends Model
         'legado' => 'boolean'
     ];
 
+    protected static function booted(): void
+    {
+        static::saved(function (Inscricao $inscricao) {
+            if ($inscricao->legado || !$inscricao->ciclo_id || !$inscricao->status_inscricao_id) {
+                return;
+            }
+
+            if (!$inscricao->wasRecentlyCreated && !$inscricao->wasChanged('status_inscricao_id')) {
+                return;
+            }
+
+            $ciclo = $inscricao->relationLoaded('ciclo')
+                ? $inscricao->ciclo
+                : \App\Models\Ciclo::find($inscricao->ciclo_id);
+
+            $statusAlvoAcesso = $ciclo?->status_acesso_estudante_id;
+
+            if (!empty($statusAlvoAcesso) && (int) $inscricao->status_inscricao_id === (int) $statusAlvoAcesso) {
+                \App\Modules\Student\Services\StudentAccessService::garantirAcesso(
+                    $inscricao,
+                    marcarMatriculado: false,
+                    dispararNotificacao: true
+                );
+            }
+        });
+    }
+
     public function student()
     {
         return $this->belongsTo(User::class, 'student_id');

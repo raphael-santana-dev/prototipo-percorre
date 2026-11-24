@@ -127,23 +127,43 @@ class PeriodDetails extends Component
         $statusNovo = StatusInscricao::find($statusId);
         if (!$statusNovo) return;
 
-        $isAprovacao = strtolower($statusNovo->nome) === 'aprovado';
-
         foreach ($inscricoes as $inscricao) {
-            if ($isAprovacao && !$inscricao->student_id) {
-                $estudante = \App\Modules\Student\Domain\Models\Student::firstOrCreate(
-                    ['email' => $inscricao->email],
-                    [
-                        'name' => $inscricao->nome,
-                        'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)),
-                        'is_active' => true,
-                    ]
-                );
-                $inscricao->student_id = $estudante->id;
-            }
+            if ($inscricao->legado) continue;
             $inscricao->status_inscricao_id = $statusId;
             $inscricao->save();
         }
+    }
+
+    public function criarAcessosEmLote(): void
+    {
+        if (empty($this->selecionadas)) {
+            $this->dispatch('erro', msg: 'Selecione pelo menos uma inscrição.');
+            return;
+        }
+
+        $inscricoes = Inscricao::where('ciclo_id', $this->ciclo->id)
+            ->whereIn('id', $this->selecionadas)
+            ->where('legado', false)
+            ->get();
+
+        $criados = 0;
+        $ativados = 0;
+        $ignorados = 0;
+
+        foreach ($inscricoes as $insc) {
+            $res = \App\Modules\Student\Services\StudentAccessService::garantirAcesso(
+                $insc,
+                marcarMatriculado: false,
+                dispararNotificacao: true
+            );
+
+            if (!$res['ok']) $ignorados++;
+            elseif ($res['criado']) $criados++;
+            elseif (!$res['ja_existia_ativo']) $ativados++;
+        }
+
+        $this->desmarcarTodas();
+        $this->dispatch('sucesso', msg: "Acessos processados: {$criados} criado(s), {$ativados} reativado(s)" . ($ignorados > 0 ? ", {$ignorados} sem e-mail." : '.'));
     }
 
     #[On('quick-change-status')]

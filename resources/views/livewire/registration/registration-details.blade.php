@@ -128,7 +128,7 @@
         </button>
 
         <button wire:click="setAba('documentacao')" class="pb-3 text-sm font-bold transition-colors border-b-2 whitespace-nowrap flex items-center gap-1.5 {{ $abaAtiva === 'documentacao' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' }}">
-            <i class="ph-bold ph-folder-open"></i> Documentação (Envio Assistido)
+            <i class="ph-bold ph-folder-open"></i> Documentação
             @if(count($this->documentosExigidos) > 0)
                 <span class="px-1.5 py-0.5 text-[10px] rounded-full bg-purpura-50 text-purpura-700 border border-purpura-200">
                     {{ count($this->documentosExigidos) }}
@@ -137,7 +137,7 @@
         </button>
 
         <button wire:click="setAba('formularios')" class="pb-3 text-sm font-bold transition-colors border-b-2 whitespace-nowrap flex items-center gap-1.5 {{ $abaAtiva === 'formularios' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' }}">
-            <i class="ph-bold ph-browsers"></i> Formulários (Embed)
+            <i class="ph-bold ph-browsers"></i> Formulários
         </button>
 
         <button wire:click="setAba('movimentacao')" class="pb-3 text-sm font-bold transition-colors border-b-2 whitespace-nowrap flex items-center gap-1.5 {{ $abaAtiva === 'movimentacao' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' }}">
@@ -871,7 +871,7 @@
                                             </span>
                                         @elseif($statusDoc === 'analise_manual')
                                             <span class="px-2.5 py-1 text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200 rounded-lg flex items-center gap-1">
-                                                <i class="ph-bold ph-clock"></i> Em Análise
+                                                <i class="ph-bold ph-clock"></i> Análise Manual
                                             </span>
                                         @else
                                             <span class="px-2.5 py-1 text-[10px] font-bold uppercase bg-gray-100 text-gray-600 rounded-lg">

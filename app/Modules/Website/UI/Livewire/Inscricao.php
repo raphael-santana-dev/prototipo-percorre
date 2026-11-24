@@ -1097,34 +1097,19 @@ class Inscricao extends Component
                 $inscricaoDB = InscricaoModel::with('ciclo')->find($this->inscricaoId);
                 if ($inscricaoDB) {
                     $dadosExtrasFinalizacao = [];
-                    $deveLiberarAcesso = (bool) ($inscricaoDB->ciclo?->liberar_acesso_estudante ?? true);
+                    $deveLiberarAcesso = (bool) ($inscricaoDB->ciclo?->liberar_acesso_estudante ?? false);
 
-                    if ($deveLiberarAcesso && !empty($inscricaoDB->email)) {
-                        $emailLimpo = strtolower(trim((string) $inscricaoDB->email));
-                        $cpfLimpo   = preg_replace('/\D/', '', (string) $inscricaoDB->cpf);
-                        $senhaProvisoria = $cpfLimpo ? substr($cpfLimpo, 0, 6) : \Illuminate\Support\Str::random(8);
+                    if ($deveLiberarAcesso) {
+                        $resAcesso = \App\Modules\Student\Services\StudentAccessService::garantirAcesso(
+                            $inscricaoDB,
+                            marcarMatriculado: false,
+                            dispararNotificacao: true
+                        );
 
-                        $student = \App\Modules\Student\Domain\Models\Student::whereRaw('LOWER(email) = ?', [$emailLimpo])->first();
-                        if (!$student) {
-                            $student = \App\Modules\Student\Domain\Models\Student::create([
-                                'name'       => $inscricaoDB->nome,
-                                'email'      => $emailLimpo,
-                                'cpf'        => $inscricaoDB->cpf,
-                                'unidade_id' => $inscricaoDB->unidade_id,
-                                'password'   => $senhaProvisoria,
-                                'is_active'  => true,
-                                'slug'       => \Illuminate\Support\Str::slug($inscricaoDB->nome) . '-' . rand(100, 999),
-                            ]);
-                            $dadosExtrasFinalizacao['senha_provisoria'] = $senhaProvisoria;
-                        } else {
-                            if (!$student->is_active) {
-                                $student->update(['is_active' => true]);
-                            }
-                            $dadosExtrasFinalizacao['senha_provisoria'] = 'Utilize sua senha já cadastrada (ou os 6 primeiros dígitos do CPF)';
+                        if ($resAcesso['ok']) {
+                            $dadosExtrasFinalizacao['senha_provisoria'] = $resAcesso['senha_provisoria'] ?? '';
+                            $dadosExtrasFinalizacao['link_login']       = route('login');
                         }
-
-                        $dadosExtrasFinalizacao['link_login'] = route('login');
-                        $inscricaoDB->student_id = $student->id;
                     }
 
                     $inscricaoDB->etapa_atual = 99;
@@ -1181,6 +1166,15 @@ class Inscricao extends Component
             $proximaEtapa = min($this->totalEtapas, $this->etapaAtual + 1);
             InscricaoModel::where('id', $this->inscricaoId)->update(['etapa_atual' => $proximaEtapa]);
             $this->resumeToken = $this->gerarResumeTokenSeguro($this->inscricaoId);
+
+            $inscricaoFase = InscricaoModel::with('ciclo')->find($this->inscricaoId);
+            if ($inscricaoFase && (bool) ($inscricaoFase->ciclo?->liberar_acesso_estudante ?? false)) {
+                \App\Modules\Student\Services\StudentAccessService::garantirAcesso(
+                    $inscricaoFase,
+                    marcarMatriculado: false,
+                    dispararNotificacao: true
+                );
+            }
         }
 
         $this->faseAtualConcluidaAguardando = true;

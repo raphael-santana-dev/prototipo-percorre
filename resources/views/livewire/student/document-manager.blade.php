@@ -133,9 +133,9 @@
                                 </div>
                             </div>
 
-                            @if($status === 'invalido_ia' && !empty($statusInfo['motivo_rejeicao']))
-                                <div class="p-2.5 rounded bg-red-50 border border-red-200 text-xs text-red-700">
-                                    <strong>Documento recusado (Tentativa {{ $statusInfo['tentativas'] }}/3):</strong> {{ $statusInfo['motivo_rejeicao'] }}
+                            @if(in_array($status, ['analise_manual', 'invalido_ia']) && !empty($statusInfo['motivo_rejeicao']))
+                                <div class="p-2.5 rounded bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                                    <strong>Encaminhado para Análise Manual:</strong> {{ $statusInfo['motivo_rejeicao'] }}
                                 </div>
                             @elseif($status === 'reprovado_manual')
                                 <div class="p-2.5 rounded bg-red-50 border border-red-200 text-xs text-red-700">

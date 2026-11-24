@@ -330,6 +330,12 @@
                             <button wire:click="abrirModalLote" class="bg-purpura-600 hover:bg-purpura-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow-sm transition ml-1">
                                 Outros
                             </button>
+                            <button type="button"
+                                    wire:click="criarAcessosEmLote"
+                                    wire:confirm="Criar/ativar o acesso ao Portal do Estudante para as inscrições selecionadas?"
+                                    class="bg-gray-900 hover:bg-black text-white px-2.5 py-1 rounded text-[10px] font-bold transition ml-1 inline-flex items-center gap-1">
+                                <i class="ph-bold ph-user-plus"></i> Criar Acessos
+                            </button>
                         </div>
                     </div>
                 @endif

@@ -211,6 +211,16 @@
                                             title="Desmarcar Legado e liberar edição">
                                         <i class="ph-bold ph-lock-key-open"></i> Remover Legado
                                     </button>
+
+                                    <div class="h-5 w-px bg-gray-700 mx-1"></div>
+
+                                    <button type="button"
+                                            wire:click="criarAcessosEmLote"
+                                            wire:confirm="Criar/ativar o acesso ao Portal do Estudante para as inscrições selecionadas?"
+                                            class="btn btn--ondark btn--small !bg-purpura-600 hover:!bg-purpura-700 border-none"
+                                            title="Criar acesso ao Portal do Estudante em lote">
+                                        <i class="ph-bold ph-user-plus"></i> Criar Acessos
+                                    </button>
                                 </div>
                                 
                                 @if($cicloBloqueado)
@@ -452,6 +462,25 @@
                                 {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
                             </span>
                         </td>
+
+                        <td class="px-4 py-1.5 text-center whitespace-nowrap">
+                            @php
+                                $isMatriculadoRow = $inscricao->student_id ? (bool) ($matriculadosMap[$inscricao->student_id] ?? false) : false;
+                            @endphp
+                            @if(!$inscricao->legado && feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+                                <div class="inline-flex items-center justify-center gap-1.5"
+                                     title="{{ $isMatriculadoRow ? 'Matriculado (acesso do estudante ativo)' : 'Ativar matrícula e criar acesso do estudante' }}">
+                                    <x-toggle :status="$isMatriculadoRow" action="toggleMatriculaInscricao({{ $inscricao->id }})" />
+                                    <span class="text-[10px] font-semibold {{ $isMatriculadoRow ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-400' }}">
+                                        {{ $isMatriculadoRow ? 'Sim' : 'Não' }}
+                                    </span>
+                                </div>
+                            @else
+                                <span class="text-[11px] font-medium {{ $isMatriculadoRow ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-400' }}">
+                                    {{ $isMatriculadoRow ? 'Matriculado' : '-' }}
+                                </span>
+                            @endif
+                        </td>
                         
                         <td class="px-4 py-1.5 text-right whitespace-nowrap">
                             <div class="flex items-center justify-end gap-1">
@@ -539,7 +568,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="13" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                        <td colspan="14" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                             <div class="flex flex-col items-center justify-center">
                                 <i class="ph ph-magnifying-glass text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
                                 <p class="font-medium text-gray-600 dark:text-gray-300">Nenhuma inscrição encontrada.</p>
@@ -1477,77 +1506,85 @@
 
     {{-- MODAL DE UPLOAD DE DOCUMENTAÇÃO EXIGIDA DIRETO NA LISTAGEM --}}
     @if($modalDocumentacaoAberto)
-        <div class="fixed inset-0 z-[160] flex items-center justify-center bg-gray-900/65 backdrop-blur-sm px-4">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
-                <div class="px-6 py-4 bg-gray-900 text-white flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <span class="w-9 h-9 rounded-xl bg-purpura-600 text-white flex items-center justify-center">
-                            <i class="ph-fill ph-folder-open text-lg"></i>
-                        </span>
-                        <div>
-                            <h3 class="text-sm font-extrabold uppercase tracking-wider">Documentação Exigida do Ciclo</h3>
-                            <p class="text-xs text-gray-300">Candidato: <b>{{ $docModalInscricaoNome }}</b> • CPF: {{ $docModalInscricaoCpf }}</p>
+        <template x-teleport="body">
+            <div class="fixed inset-0 z-[160] flex items-center justify-center bg-black/50 p-4 font-sans"
+                 @keydown.escape.window="$wire.fecharModalDocumentacao()"
+                 role="dialog"
+                 aria-modal="true">
+                <div class="bg-white dark:bg-gray-900 rounded-lg w-full max-w-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
+                    
+                    {{-- Cabeçalho limpo --}}
+                    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-start justify-between gap-4 shrink-0">
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                                Documentação Exigida
+                            </h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                                {{ $docModalInscricaoNome }}@if(!empty($docModalInscricaoCpf)) · CPF: {{ $docModalInscricaoCpf }}@endif
+                            </p>
                         </div>
+                        <button type="button" wire:click="fecharModalDocumentacao" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1 rounded transition shrink-0" aria-label="Fechar">
+                            <i class="ph ph-x text-base"></i>
+                        </button>
                     </div>
-                    <button type="button" wire:click="fecharModalDocumentacao" class="text-gray-400 hover:text-white">
-                        <i class="ph-bold ph-x text-lg"></i>
-                    </button>
-                </div>
 
-                <div class="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
-                    <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
-                        <span class="text-xs text-gray-500">Envie ou valide os documentos solicitados para a matrícula deste candidato.</span>
-                        <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer text-xs font-bold {{ $docModalValidarComIa ? 'bg-purpura-50 border-purpura-300 text-purpura-800' : 'bg-amber-50 border-amber-300 text-amber-800' }}">
-                            <input type="checkbox" wire:model.live="docModalValidarComIa" class="w-4 h-4 rounded text-purpura-600">
-                            <span>{{ $docModalValidarComIa ? 'Validação por IA: Ativa' : 'IA Desativada (Aprovação Direta)' }}</span>
+                    {{-- Barra de controle de validação por IA --}}
+                    <div class="px-5 py-3 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
+                        <span class="text-xs text-gray-500 dark:text-gray-400">
+                            Envie ou valide os documentos exigidos para este candidato.
+                        </span>
+
+                        <label class="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none shrink-0">
+                            <input type="checkbox" wire:model.live="docModalValidarComIa" class="w-4 h-4 rounded border-gray-300 text-purpura-600 focus:ring-purpura-500">
+                            <span class="font-medium">{{ $docModalValidarComIa ? 'Validar com IA' : 'Aprovação direta (sem IA)' }}</span>
                         </label>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {{-- Lista vertical de documentos (sem buracos em tela quando há 1 item) --}}
+                    <div class="overflow-y-auto custom-scrollbar flex-1 divide-y divide-gray-100 dark:divide-gray-800">
                         @forelse($docModalExigidos as $docItem)
                             @php
                                 $infoDocM = $docModalArquivosEnviados[$docItem['id']] ?? ['status' => 'pendente'];
                                 $stDocM   = $infoDocM['status'] ?? 'pendente';
+                                $aprovadoDoc = in_array($stDocM, ['valido_ia', 'aprovado_manual'], true);
                             @endphp
-                            <div class="p-4 rounded-xl border bg-white dark:bg-gray-900 flex flex-col justify-between gap-3 {{ in_array($stDocM, ['valido_ia', 'aprovado_manual']) ? 'border-emerald-200 bg-emerald-50/10' : 'border-gray-200 dark:border-gray-700' }}">
-                                <div>
-                                    <div class="flex items-start justify-between gap-2">
-                                        <h4 class="text-xs font-bold text-gray-900 dark:text-white">
-                                            {{ $docItem['nome'] }}
-                                            @if($docItem['is_obrigatorio'])
-                                                <span class="text-red-500">*</span>
-                                            @endif
-                                        </h4>
-                                        <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded {{ in_array($stDocM, ['valido_ia', 'aprovado_manual']) ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : ($stDocM === 'pendente' ? 'bg-gray-100 text-gray-600' : 'bg-red-50 text-red-700 border border-red-200') }}">
-                                            {{ in_array($stDocM, ['valido_ia', 'aprovado_manual']) ? 'Aprovado' : ($stDocM === 'pendente' ? 'Pendente' : 'Rejeitado/Análise') }}
+                            <div class="px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition">
+                                <div class="min-w-0 flex-1 space-y-1">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="text-xs font-semibold text-gray-900 dark:text-white">
+                                            {{ $docItem['nome'] }}@if($docItem['is_obrigatorio'])<span class="text-red-500 ml-0.5">*</span>@endif
+                                        </span>
+                                        <span class="px-2 py-0.5 text-[10px] font-medium rounded border {{ $aprovadoDoc ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800' : ($stDocM === 'pendente' ? 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700' : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800') }}">
+                                            {{ $aprovadoDoc ? 'Aprovado' : ($stDocM === 'pendente' ? 'Pendente' : 'Em análise / Recusado') }}
                                         </span>
                                     </div>
+
                                     @if(!empty($docItem['descricao']))
-                                        <p class="text-[11px] text-gray-500 mt-1">{{ $docItem['descricao'] }}</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ $docItem['descricao'] }}</p>
                                     @endif
+
                                     @if(!empty($infoDocM['motivo_rejeicao']))
-                                        <p class="text-[11px] text-red-600 font-semibold mt-1.5">{{ $infoDocM['motivo_rejeicao'] }}</p>
+                                        <p class="text-xs text-red-600 dark:text-red-400">{{ $infoDocM['motivo_rejeicao'] }}</p>
                                     @endif
                                 </div>
 
-                                <div class="pt-2.5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2">
-                                    <div class="flex items-center gap-1.5">
-                                        @if(!empty($infoDocM['arquivo_caminho']))
-                                            <a href="{{ asset('storage/' . $infoDocM['arquivo_caminho']) }}" target="_blank" class="px-2.5 py-1 text-[11px] font-bold text-purpura-700 bg-purpura-50 border border-purpura-200 rounded-lg hover:bg-purpura-100">
-                                                Ver ↗
-                                            </a>
-                                        @endif
-                                        @if(!empty($infoDocM['id']) && !in_array($stDocM, ['valido_ia', 'aprovado_manual']))
-                                            <button type="button" wire:click="aprovarDocumentoModalManualmente({{ $docItem['id'] }})" class="px-2.5 py-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100">
-                                                Aprovar
-                                            </button>
-                                        @endif
-                                    </div>
+                                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                    @if(!empty($infoDocM['arquivo_caminho']))
+                                        <a href="{{ asset('storage/' . $infoDocM['arquivo_caminho']) }}" target="_blank" class="px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 transition">
+                                            Ver arquivo ↗
+                                        </a>
+                                    @endif
 
-                                    <label class="px-3 py-1.5 bg-gray-900 hover:bg-black text-white text-[11px] font-bold rounded-lg cursor-pointer transition inline-flex items-center gap-1">
-                                        <i class="ph-bold ph-upload-simple"></i>
+                                    @if(!empty($infoDocM['id']) && !$aprovadoDoc)
+                                        <button type="button" wire:click="aprovarDocumentoModalManualmente({{ $docItem['id'] }})" class="px-2.5 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 transition">
+                                            Aprovar
+                                        </button>
+                                    @endif
+
+                                    <label class="px-3 py-1.5 bg-purpura-600 hover:bg-purpura-700 text-white text-xs font-semibold rounded-md cursor-pointer transition inline-flex items-center gap-1.5">
+                                        <i class="ph ph-upload-simple text-sm"></i>
                                         <span wire:loading.remove wire:target="uploadsDocModal.{{ $docItem['id'] }}">
-                                            {{ !empty($infoDocM['id']) ? 'Substituir' : 'Enviar Arquivo' }}
+                                            {{ !empty($infoDocM['id']) ? 'Substituir' : 'Enviar arquivo' }}
                                         </span>
                                         <span wire:loading wire:target="uploadsDocModal.{{ $docItem['id'] }}">Enviando...</span>
                                         <input type="file" wire:model="uploadsDocModal.{{ $docItem['id'] }}" accept=".jpg,.jpeg,.png,.webp,.pdf" class="hidden">
@@ -1555,23 +1592,25 @@
                                 </div>
                             </div>
                         @empty
-                            <div class="col-span-2 py-8 text-center text-xs text-gray-400">
+                            <div class="py-10 px-5 text-center text-xs text-gray-500">
                                 Nenhum documento exigido cadastrado para este ciclo.
                             </div>
                         @endforelse
                     </div>
-                </div>
 
-                <div class="px-6 py-3.5 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                    <a href="{{ route('inscricoes.show', $docModalInscricaoId) }}" class="text-xs font-bold text-purpura-600 hover:underline">
-                        Abrir Ficha Completa do Candidato ↗
-                    </a>
-                    <button type="button" wire:click="fecharModalDocumentacao" class="btn btn--secondary btn--small">
-                        Fechar
-                    </button>
+                    {{-- Rodapé --}}
+                    <div class="px-5 py-3.5 bg-gray-50 dark:bg-gray-800/60 border-t border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
+                        <a href="{{ route('inscricoes.show', $docModalInscricaoId) }}" class="text-xs font-medium text-purpura-600 dark:text-purpura-400 hover:underline">
+                            Abrir ficha completa do candidato ↗
+                        </a>
+                        <button type="button" wire:click="fecharModalDocumentacao" class="px-3.5 py-1.5 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition">
+                            Fechar
+                        </button>
+                    </div>
+
                 </div>
             </div>
-        </div>
+        </template>
     @endif
 
     {{-- MODAL DE VISUALIZAÇÃO E DOWNLOAD DO LAUDO PCD --}}

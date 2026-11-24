@@ -16,8 +16,10 @@ class RegrasManager extends Component
     use WithEditingLock;
 
     public Ciclo $ciclo;
-    public array $regras = []; 
+    public array $regras = [];
     public array $camposDisponiveis = [];
+    public string $hashRegrasOriginais = '';
+    public bool $modalRecalculoAberto = false;
 
     public function mount($id, ?string $slug = null)
     {
@@ -26,26 +28,44 @@ class RegrasManager extends Component
 
         $this->ciclo = Ciclo::findOrFail($id);
 
-        // REGISTO DE LOCK (BLOQUEIO DE EDIÇÃO SIMULTÂNEA)
+        // REGISTRO DE LOCK (BLOQUEIO DE EDIÇÃO SIMULTÂNEA)
         $this->resourceLockType = 'ciclo_regras';
         $this->resourceLockId = (int) $this->ciclo->id;
         $this->checkAndAcquireLock();
-        
-        $regrasDb = is_string($this->ciclo->regras_pontuacao) 
-                    ? json_decode($this->ciclo->regras_pontuacao, true) 
-                    : ($this->ciclo->regras_pontuacao ?? []);
-                    
-        $this->regras = array_map(function($regra) {
+
+        $regrasDb = is_string($this->ciclo->regras_pontuacao)
+            ? json_decode($this->ciclo->regras_pontuacao, true)
+            : ($this->ciclo->regras_pontuacao ?? []);
+
+        $this->regras = array_map(function ($regra) {
             $regra['tipo_regra'] = $regra['tipo_regra'] ?? 'padrao';
             $regra['escopo'] = $regra['escopo'] ?? 'especifico';
             return $regra;
-        }, $regrasDb);
-        
+        }, is_array($regrasDb) ? $regrasDb : []);
+
+        $this->hashRegrasOriginais = $this->gerarHashRegras($this->regras);
+
         $this->carregarCampos();
-        
+
         if (empty($this->regras)) {
             $this->addRegra();
         }
+    }
+
+    private function gerarHashRegras(array $regras): string
+    {
+        $normalizadas = array_values(array_map(function ($r) {
+            return [
+                'tipo_regra' => (string) ($r['tipo_regra'] ?? 'padrao'),
+                'escopo'     => (string) ($r['escopo'] ?? 'especifico'),
+                'campo'      => trim((string) ($r['campo'] ?? '')),
+                'operador'   => (string) ($r['operador'] ?? '='),
+                'valor'      => trim((string) ($r['valor'] ?? '')),
+                'pontos'     => (float) ($r['pontos'] ?? 0),
+            ];
+        }, $regras));
+
+        return md5(json_encode($normalizadas));
     }
 
     public function carregarCampos()
@@ -135,9 +155,55 @@ class RegrasManager extends Component
 
         $this->validate($rules, $messages);
 
+        $novoHash = $this->gerarHashRegras($this->regras);
+        $houveAlteracao = $novoHash !== $this->hashRegrasOriginais;
+
         $this->ciclo->update(['regras_pontuacao' => $this->regras]);
-        
+        $this->hashRegrasOriginais = $novoHash;
+
         $this->dispatch('sucesso', msg: 'Regras de pontuação salvas com sucesso!');
+
+        if ($houveAlteracao) {
+            $this->modalRecalculoAberto = true;
+        }
+    }
+
+    public function fecharModalRecalculo(): void
+    {
+        $this->modalRecalculoAberto = false;
+    }
+
+    public function confirmarRecalculo(): void
+    {
+        $trackingScore = \App\Models\SystemTask::create([
+            'user_id'            => auth()->id(),
+            'tipo'               => 'inscricoes',
+            'operacao'           => 'recalculo',
+            'formato'            => 'system',
+            'arquivo_nome'       => '1/2: Recálculo de Pontuação (' . $this->ciclo->nome . ')',
+            'status'             => 'na_fila',
+            'total_linhas'       => 0,
+            'linhas_processadas' => 0,
+        ]);
+
+        $trackingRank = \App\Models\SystemTask::create([
+            'user_id'            => auth()->id(),
+            'tipo'               => 'inscricoes',
+            'operacao'           => 'ranking',
+            'formato'            => 'system',
+            'arquivo_nome'       => '2/2: Geração de Ranking (' . $this->ciclo->nome . ')',
+            'status'             => 'na_fila',
+            'total_linhas'       => 0,
+            'linhas_processadas' => 0,
+        ]);
+
+        \Illuminate\Support\Facades\Bus::chain([
+            new \App\Jobs\RecalcularPontuacoesGlobaisJob($trackingScore->id, $this->ciclo->id),
+            new \App\Jobs\GerarRankingGlobalJob($trackingRank->id, $this->ciclo->id),
+        ])->dispatch();
+
+        $this->modalRecalculoAberto = false;
+        $this->dispatch('sucesso', msg: 'Recálculo de pontuação e ranking iniciado! Acompanhe no Gerenciador de Integrações.');
     }
 
     public function render()
