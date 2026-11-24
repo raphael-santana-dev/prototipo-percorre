@@ -176,9 +176,9 @@ class DocumentManager extends Component
             $docMatricula->status_analise = 'valido_ia';
             $docMatricula->log_ia = $resultadoIa['raw'] ?? [];
         } else {
-            $docMatricula->status_analise = ($docMatricula->tentativas_ia >= 3) ? 'analise_manual' : 'invalido_ia';
+            $docMatricula->status_analise = 'analise_manual';
             $docMatricula->log_ia = [
-                'motivo_rejeicao' => $resultadoIa['motivo_rejeicao'],
+                'motivo_rejeicao' => $resultadoIa['motivo_rejeicao'] ?? 'Documento encaminhado para análise manual da secretaria.',
                 'raw'             => $resultadoIa['raw'] ?? [],
             ];
         }

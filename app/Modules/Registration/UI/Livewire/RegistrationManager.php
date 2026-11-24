@@ -279,6 +279,7 @@ class RegistrationManager extends Component
     public string $docModalInscricaoNome = '';
     public string $docModalInscricaoCpf = '';
     public bool $docModalValidarComIa = true;
+    public bool $docModalMatriculado = false;
     public array $docModalExigidos = [];
     public array $docModalArquivosEnviados = [];
     public array $uploadsDocModal = [];
@@ -306,9 +307,14 @@ class RegistrationManager extends Component
             return;
         }
 
+        $studentVinculado = $insc->student_id
+            ? \App\Modules\Student\Domain\Models\Student::find($insc->student_id)
+            : null;
+
         $this->docModalInscricaoId   = $insc->id;
         $this->docModalInscricaoNome = (string) $insc->nome;
-        $this->docModalInscricaoCpf  = (string) $insc->cpf;
+        $this->docModalInscricaoCpf  = trim((string) ($insc->cpf ?? ''));
+        $this->docModalMatriculado   = (bool) ($studentVinculado?->matriculado ?? false);
         $this->uploadsDocModal       = [];
 
         $this->carregarStatusArquivosModal();
@@ -319,9 +325,177 @@ class RegistrationManager extends Component
     {
         $this->modalDocumentacaoAberto  = false;
         $this->docModalInscricaoId      = null;
+        $this->docModalMatriculado      = false;
         $this->docModalExigidos         = [];
         $this->docModalArquivosEnviados = [];
         $this->uploadsDocModal          = [];
+    }
+
+    public function criarAcessosEmLote(): void
+    {
+        if (!$this->autorizarAcao('inscricao.editar', 'criar acessos de estudantes em lote')) {
+            return;
+        }
+
+        if (empty($this->selecionadas)) {
+            $this->dispatch('erro', msg: 'Selecione pelo menos uma inscrição.');
+            return;
+        }
+
+        $inscricoes = Inscricao::whereIn('id', $this->selecionadas)
+            ->where('legado', false)
+            ->get();
+
+        if ($inscricoes->isEmpty()) {
+            $this->dispatch('erro', msg: 'Nenhuma inscrição válida (não legada) selecionada.');
+            return;
+        }
+
+        $criados = 0;
+        $ativados = 0;
+        $jaAtivos = 0;
+        $ignorados = 0;
+
+        foreach ($inscricoes as $insc) {
+            $res = \App\Modules\Student\Services\StudentAccessService::garantirAcesso(
+                $insc,
+                marcarMatriculado: false,
+                dispararNotificacao: true
+            );
+
+            if (!$res['ok']) {
+                $ignorados++;
+            } elseif ($res['criado']) {
+                $criados++;
+            } elseif (!$res['ja_existia_ativo']) {
+                $ativados++;
+            } else {
+                $jaAtivos++;
+            }
+        }
+
+        $this->desmarcarTodas();
+
+        $partes = [];
+        if ($criados > 0)  $partes[] = "{$criados} acesso(s) criado(s)";
+        if ($ativados > 0) $partes[] = "{$ativados} reativado(s)";
+        if ($jaAtivos > 0) $partes[] = "{$jaAtivos} já ativo(s)";
+        if ($ignorados > 0) $partes[] = "{$ignorados} ignorado(s) sem e-mail";
+
+        $this->dispatch('sucesso', msg: 'Processamento concluído: ' . implode(', ', $partes) . '.');
+    }
+
+    public function toggleMatriculaInscricao(int $inscricaoId): void
+    {
+        if (!$this->autorizarAcao('inscricao.editar', 'alterar matrícula do candidato')) {
+            return;
+        }
+
+        $inscricao = Inscricao::findOrFail($inscricaoId);
+
+        if ($inscricao->legado) {
+            $this->dispatch('erro', msg: 'Inscrições marcadas como Legado são somente leitura.');
+            return;
+        }
+
+        $emailLimpo = strtolower(trim((string) ($inscricao->email ?? '')));
+        $cpfLimpo   = preg_replace('/\D/', '', (string) ($inscricao->cpf ?? ''));
+
+        $student = $inscricao->student_id
+            ? \App\Modules\Student\Domain\Models\Student::find($inscricao->student_id)
+            : null;
+
+        if (!$student && ($emailLimpo !== '' || strlen($cpfLimpo) === 11)) {
+            $student = \App\Modules\Student\Domain\Models\Student::query()
+                ->where(function ($q) use ($emailLimpo, $cpfLimpo) {
+                    if ($emailLimpo !== '') {
+                        $q->orWhereRaw('LOWER(email) = ?', [$emailLimpo]);
+                    }
+                    if (strlen($cpfLimpo) === 11) {
+                        $q->orWhereRaw("REGEXP_REPLACE(cpf, '[^0-9]', '', 'g') = ?", [$cpfLimpo]);
+                    }
+                })
+                ->first();
+        }
+
+        $jaMatriculado = (bool) ($student?->matriculado ?? false);
+
+        if ($jaMatriculado) {
+            $student->matriculado = false;
+            $student->save();
+
+            if ($this->docModalInscricaoId === $inscricao->id) {
+                $this->docModalMatriculado = false;
+            }
+
+            $this->dispatch('sucesso', msg: "Matrícula de {$inscricao->nome} desativada.");
+            return;
+        }
+
+        if (!$student && $emailLimpo === '') {
+            $this->dispatch('erro', msg: 'Não é possível criar o acesso do estudante porque a inscrição não possui e-mail cadastrado.');
+            return;
+        }
+
+        $contaNova = false;
+        $senhaProvisoria = strlen($cpfLimpo) >= 6 ? substr($cpfLimpo, 0, 6) : Str::random(8);
+
+        if (!$student) {
+            $student = \App\Modules\Student\Domain\Models\Student::create([
+                'name'       => $inscricao->nome,
+                'email'      => $emailLimpo,
+                'cpf'        => $inscricao->cpf ?: null,
+                'unidade_id' => $inscricao->unidade_id,
+                'password'   => $senhaProvisoria,
+                'is_active'  => true,
+                'matriculado'=> true,
+                'slug'       => Str::slug($inscricao->nome) . '-' . rand(100, 999),
+            ]);
+            $contaNova = true;
+        } else {
+            $student->is_active   = true;
+            $student->matriculado = true;
+            if (empty($student->unidade_id) && $inscricao->unidade_id) {
+                $student->unidade_id = $inscricao->unidade_id;
+            }
+            if (empty($student->cpf) && $inscricao->cpf) {
+                $student->cpf = $inscricao->cpf;
+            }
+            $student->save();
+        }
+
+        if ((int) $inscricao->student_id !== (int) $student->id) {
+            $inscricao->student_id = $student->id;
+            $inscricao->save();
+        }
+
+        try {
+            $dadosExtrasAcesso = [
+                'nome_candidato'   => $inscricao->nome,
+                'email_acesso'     => $student->email,
+                'senha_provisoria' => $contaNova
+                    ? $senhaProvisoria
+                    : 'Utilize sua senha já cadastrada (ou os 6 primeiros dígitos do CPF)',
+                'link_login'       => route('login'),
+                'link_painel'      => route('student.dashboard'),
+            ];
+
+            \App\Modules\Comunicacao\Services\AutomacaoService::disparar(
+                'estudante.acesso_liberado',
+                $inscricao,
+                $dadosExtrasAcesso
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Falha ao disparar automação de acesso do estudante (Inscrição #{$inscricao->id}): " . $e->getMessage());
+        }
+
+        if ($this->docModalInscricaoId === $inscricao->id) {
+            $this->docModalMatriculado = true;
+        }
+
+        $this->dispatch('sucesso', msg: $contaNova
+            ? "Matrícula confirmada, acesso criado e notificação enviada para {$inscricao->nome}!"
+            : "Matrícula confirmada, acesso ativado e notificação enviada para {$inscricao->nome}!");
     }
 
     public function carregarStatusArquivosModal(): void
@@ -1870,6 +2044,7 @@ class RegistrationManager extends Component
             ['key' => 'pontuacao_total', 'label' => 'Pontuação', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'posicao_ranking_geral', 'label' => 'R. Geral', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'status', 'label' => 'Status', 'sortable' => false],
+            ['key' => 'matriculado', 'label' => 'Matrícula', 'sortable' => false, 'class' => 'text-center w-28'],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
     }
@@ -2173,16 +2348,25 @@ class RegistrationManager extends Component
         $cicloAtualModel = !empty($cicloIdReferencia) ? Ciclo::find($cicloIdReferencia) : null;
         $cicloBloqueado = $cicloAtualModel ? (bool)$cicloAtualModel->bloqueado : false;
 
+        $studentIdsPagina = collect($inscricoes->items())->pluck('student_id')->filter()->unique()->values()->toArray();
+        $matriculadosMap = !empty($studentIdsPagina)
+            ? \App\Modules\Student\Domain\Models\Student::whereIn('id', $studentIdsPagina)
+                ->pluck('matriculado', 'id')
+                ->map(fn($v) => (bool) $v)
+                ->toArray()
+            : [];
+
         return view('livewire.registration.registration-manager', [
-            'registros' => $inscricoes,
-            'metricas' => $metricas,
-            'etapasDb' => $etapasDb,
-            'cicloBloqueado' => $cicloBloqueado,
+            'registros'          => $inscricoes,
+            'matriculadosMap'    => $matriculadosMap,
+            'metricas'           => $metricas,
+            'etapasDb'           => $etapasDb,
+            'cicloBloqueado'     => $cicloBloqueado,
             'statusInscricoesDb' => $statusDbView,
-            'ciclosDb' => $dropdowns['ciclos'],
-            'unidadesDb' => $dropdowns['unidades'],
-            'turnosDb' => $dropdowns['turnos'],
-            'cursosDb' => $dropdowns['cursos'],
+            'ciclosDb'           => $dropdowns['ciclos'],
+            'unidadesDb'         => $dropdowns['unidades'],
+            'turnosDb'           => $dropdowns['turnos'],
+            'cursosDb'           => $dropdowns['cursos'],
         ]);
     }
 }

@@ -170,12 +170,42 @@
                         </label>
                     </div>
 
-                    <div class="flex items-start">
-                        <input type="checkbox" wire:model="liberar_acesso_estudante" id="liberar_acesso_estudante" class="w-4 h-4 mt-0.5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
-                        <label for="liberar_acesso_estudante" class="block ml-2 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
-                            <span class="font-bold text-gray-900 dark:text-white">Liberar acesso ao Portal do Estudante ao finalizar a inscrição:</span>
-                            Cria/ativa automaticamente a conta do candidato assim que ele concluir a última etapa do formulário.
-                        </label>
+                    <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <span class="block text-xs font-bold text-gray-900 dark:text-white">
+                                    Criar acesso ao concluir o formulário
+                                </span>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                    Cria e ativa automaticamente o acesso do estudante assim que ele concluir o formulário ou a 1ª fase configurada.
+                                </p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                <input type="checkbox" wire:model.live="liberar_acesso_estudante" class="sr-only peer">
+                                <div class="w-9 h-5 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:bg-purpura-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                            </label>
+                        </div>
+
+                        <div class="pt-3 border-t border-gray-200 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-900 dark:text-white">
+                                    Status da inscrição que cria o acesso do estudante
+                                </label>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                    Opcional. Quando a inscrição for movida para este status, o acesso do estudante será criado automaticamente.
+                                </p>
+                            </div>
+                            <div class="w-full md:w-72 shrink-0">
+                                <select wire:model="status_acesso_estudante_id" class="w-full text-xs font-semibold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white py-2">
+                                    <option value="">Nenhum (não criar por status)</option>
+                                    @foreach($statusDisponiveis as $stAcesso)
+                                        @if(empty($statusSelecionados) || in_array((string) $stAcesso->id, $statusSelecionados, true))
+                                            <option value="{{ $stAcesso->id }}">{{ $stAcesso->nome }}</option>
+                                        @endif
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
