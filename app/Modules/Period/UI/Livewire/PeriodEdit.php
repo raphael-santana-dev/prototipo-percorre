@@ -24,6 +24,9 @@ class PeriodEdit extends Component
     use WithEditingLock;
 
     public $cicloId, $nome, $ano, $semestre, $data_inicio, $data_fim, $status;
+    public bool $encerrado = false;
+    public bool $liberar_acesso_estudante = false;
+    public $status_acesso_estudante_id = '';
     public $status_documentacao_id = '';
     public $data_inicio_matricula = '';
     public $data_fim_matricula = '';
@@ -61,6 +64,9 @@ class PeriodEdit extends Component
         $this->data_inicio = $ciclo->data_inicio->format('Y-m-d\TH:i');
         $this->data_fim = $ciclo->data_fim->format('Y-m-d\TH:i');
         $this->status = (bool) $ciclo->status;
+        $this->encerrado = (bool) ($ciclo->encerrado ?? false);
+        $this->liberar_acesso_estudante = (bool) ($ciclo->liberar_acesso_estudante ?? false);
+        $this->status_acesso_estudante_id = $ciclo->status_acesso_estudante_id ? (string) $ciclo->status_acesso_estudante_id : '';
         $this->status_documentacao_id = $ciclo->status_documentacao_id ? (string) $ciclo->status_documentacao_id : '';
         $this->data_inicio_matricula = $ciclo->data_inicio_matricula ? \Carbon\Carbon::parse($ciclo->data_inicio_matricula)->format('Y-m-d\TH:i') : '';
         $this->data_fim_matricula = $ciclo->data_fim_matricula ? \Carbon\Carbon::parse($ciclo->data_fim_matricula)->format('Y-m-d\TH:i') : '';
@@ -357,10 +363,26 @@ class PeriodEdit extends Component
         $this->documentosExigidos = array_values($this->documentosExigidos);
     }
 
+    public function toggleEncerrado(): void
+    {
+        $ciclo = Ciclo::findOrFail($this->cicloId);
+        $this->encerrado = !($ciclo->encerrado ?? false);
+        $ciclo->update(['encerrado' => $this->encerrado]);
+
+        $this->dispatch('sucesso', msg: $this->encerrado
+            ? 'Ciclo marcado como Encerrado (modo somente visualização ativado).'
+            : 'Ciclo reaberto para edições!');
+    }
+
     public function salvar()
     {
         if ($this->isLockedByOther) {
             $this->dispatch('erro', msg: "Este ciclo está sendo editado por {$this->lockOwnerName}.");
+            return;
+        }
+
+        if ($this->encerrado) {
+            $this->dispatch('erro', msg: 'Este ciclo está marcado como Encerrado e permite apenas visualização.');
             return;
         }
 
@@ -413,6 +435,12 @@ class PeriodEdit extends Component
 
         if (\Illuminate\Support\Facades\Schema::hasColumn('ciclos', 'status_documentacao_id')) {
             $dadosUpdateCiclo['status_documentacao_id'] = !empty($this->status_documentacao_id) ? (int) $this->status_documentacao_id : null;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ciclos', 'liberar_acesso_estudante')) {
+            $dadosUpdateCiclo['liberar_acesso_estudante'] = (bool) $this->liberar_acesso_estudante;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ciclos', 'status_acesso_estudante_id')) {
+            $dadosUpdateCiclo['status_acesso_estudante_id'] = !empty($this->status_acesso_estudante_id) ? (int) $this->status_acesso_estudante_id : null;
         }
 
         $cicloSalvo->update($dadosUpdateCiclo);

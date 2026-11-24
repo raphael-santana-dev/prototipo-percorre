@@ -1094,10 +1094,28 @@ class Inscricao extends Component
             }
         } else {
             if (!$this->isTeste) {
-                $inscricaoDB = InscricaoModel::find($this->inscricaoId);
+                $inscricaoDB = InscricaoModel::with('ciclo')->find($this->inscricaoId);
                 if ($inscricaoDB) {
-                    $inscricaoDB->update(['etapa_atual' => 99]);
-                    \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.finalizada', $inscricaoDB);
+                    $dadosExtrasFinalizacao = [];
+                    $deveLiberarAcesso = (bool) ($inscricaoDB->ciclo?->liberar_acesso_estudante ?? false);
+
+                    if ($deveLiberarAcesso) {
+                        $resAcesso = \App\Modules\Student\Services\StudentAccessService::garantirAcesso(
+                            $inscricaoDB,
+                            marcarMatriculado: false,
+                            dispararNotificacao: true
+                        );
+
+                        if ($resAcesso['ok']) {
+                            $dadosExtrasFinalizacao['senha_provisoria'] = $resAcesso['senha_provisoria'] ?? '';
+                            $dadosExtrasFinalizacao['link_login']       = route('login');
+                        }
+                    }
+
+                    $inscricaoDB->etapa_atual = 99;
+                    $inscricaoDB->save();
+
+                    \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.finalizada', $inscricaoDB, $dadosExtrasFinalizacao);
                 }
             }
 
@@ -1148,6 +1166,15 @@ class Inscricao extends Component
             $proximaEtapa = min($this->totalEtapas, $this->etapaAtual + 1);
             InscricaoModel::where('id', $this->inscricaoId)->update(['etapa_atual' => $proximaEtapa]);
             $this->resumeToken = $this->gerarResumeTokenSeguro($this->inscricaoId);
+
+            $inscricaoFase = InscricaoModel::with('ciclo')->find($this->inscricaoId);
+            if ($inscricaoFase && (bool) ($inscricaoFase->ciclo?->liberar_acesso_estudante ?? false)) {
+                \App\Modules\Student\Services\StudentAccessService::garantirAcesso(
+                    $inscricaoFase,
+                    marcarMatriculado: false,
+                    dispararNotificacao: true
+                );
+            }
         }
 
         $this->faseAtualConcluidaAguardando = true;

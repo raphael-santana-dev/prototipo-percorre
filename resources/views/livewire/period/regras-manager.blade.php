@@ -95,9 +95,9 @@
 
                         <div class="w-full md:w-40 shrink-0">
                             <select wire:model.live="regras.{{ $index }}.tipo_regra" class="w-full border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded text-xs focus:ring-purpura-500 focus:border-purpura-500 py-1.5 shadow-sm {{ $isEspecial ? 'bg-indigo-50 text-indigo-700 font-bold' : 'bg-gray-50' }} @error("regras.$index.tipo_regra") border-red-500 bg-red-50 text-red-700 @enderror">
-                                <option value="padrao">Padrão (+ Pts)</option>
-                                <option value="bonus_por_acerto">Bônus Acerto</option>
-                                <option value="multiplicador_percentual">Multiplicador (%)</option>
+                                <option select value="padrao">Padrão (+ Pts)</option>
+                                <!--<option value="bonus_por_acerto">Bônus Acerto</option>
+                                <option value="multiplicador_percentual">Multiplicador (%)</option>-->
                             </select>
                             @error("regras.$index.tipo_regra") <span class="text-[9px] text-red-500 font-bold mt-1 block leading-tight">{{ $message }}</span> @enderror
                         </div>
@@ -200,5 +200,51 @@
                 </button>
             </div>
         </div>
+    @endif
+
+    {{-- MODAL DE CONFIRMAÇÃO: RECÁLCULO DE PONTUAÇÃO E RANKING --}}
+    @if($modalRecalculoAberto)
+        <template x-teleport="body">
+            <div class="fixed inset-0 z-[250] flex items-center justify-center bg-black/50 p-4 font-sans"
+                 @keydown.escape.window="$wire.fecharModalRecalculo()"
+                 role="dialog"
+                 aria-modal="true">
+                <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 w-full max-w-md overflow-hidden">
+                    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                            Recalcular Pontuação e Ranking?
+                        </h3>
+                        <button type="button" wire:click="fecharModalRecalculo" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1 rounded transition" aria-label="Fechar">
+                            <i class="ph ph-x text-base"></i>
+                        </button>
+                    </div>
+
+                    <div class="p-5 space-y-2 text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                        <p>
+                            As regras de pontuação do ciclo <strong class="text-gray-900 dark:text-white">{{ $ciclo->nome }}</strong> foram atualizadas.
+                        </p>
+                        <p>
+                            Deseja recalcular a pontuação e gerar novamente o ranking de todas as inscrições deste ciclo agora? O processamento ocorrerá em segundo plano.
+                        </p>
+                    </div>
+
+                    <div class="px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex flex-col-reverse sm:flex-row justify-end gap-2">
+                        <button type="button"
+                                wire:click="fecharModalRecalculo"
+                                class="px-3.5 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition">
+                            Agora não
+                        </button>
+                        <button type="button"
+                                wire:click="confirmarRecalculo"
+                                wire:loading.attr="disabled"
+                                class="px-4 py-2 rounded-md bg-purpura-600 hover:bg-purpura-700 text-white text-xs font-semibold transition inline-flex items-center justify-center gap-1.5">
+                            <i class="ph ph-calculator text-sm"></i>
+                            <span wire:loading.remove wire:target="confirmarRecalculo">Sim, recalcular agora</span>
+                            <span wire:loading wire:target="confirmarRecalculo">Iniciando...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
     @endif
 </div>

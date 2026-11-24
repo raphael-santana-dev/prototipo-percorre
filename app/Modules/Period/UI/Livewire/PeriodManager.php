@@ -46,6 +46,8 @@ class PeriodManager extends Component
     public array $statusSelecionados = [];
     public $novoStatusSelecionado = ''; 
     public $status_documentacao_id = '';
+    public bool $liberar_acesso_estudante = false;
+    public $status_acesso_estudante_id = '';
 
     public array $documentosExigidos = []; 
 
@@ -196,6 +198,7 @@ class PeriodManager extends Component
         $this->resetValidation();
         $this->reset([
             'nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 'status', 'status_documentacao_id',
+            'liberar_acesso_estudante', 'status_acesso_estudante_id',
             'data_inicio_matricula', 'data_fim_matricula', 'tipo_ciclo', 'slug_projeto',
             'unidadesSelecionadas', 'cursosSelecionados', 'turnosSelecionados',
             'ofertasVagas', 'statusSelecionados', 'documentosExigidos',
@@ -297,6 +300,10 @@ class PeriodManager extends Component
             'data_inicio_matricula' => !empty($this->data_inicio_matricula) ? $this->data_inicio_matricula : null,
             'data_fim_matricula'    => !empty($this->data_fim_matricula) ? $this->data_fim_matricula : null,
         ];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ciclos', 'liberar_acesso_estudante')) {
+            $dados['liberar_acesso_estudante'] = (bool) $this->liberar_acesso_estudante;
+        }
 
         if ($this->cicloIdEmEdicao) {
             $ciclo = Ciclo::findOrFail($this->cicloIdEmEdicao);
@@ -413,10 +420,15 @@ class PeriodManager extends Component
     {
         if (!$this->cicloIdEmEdicao) return;
 
+        $updatesStatusCiclo = [];
         if (\Illuminate\Support\Facades\Schema::hasColumn('ciclos', 'status_documentacao_id')) {
-            Ciclo::where('id', $this->cicloIdEmEdicao)->update([
-                'status_documentacao_id' => !empty($this->status_documentacao_id) ? (int) $this->status_documentacao_id : null,
-            ]);
+            $updatesStatusCiclo['status_documentacao_id'] = !empty($this->status_documentacao_id) ? (int) $this->status_documentacao_id : null;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ciclos', 'status_acesso_estudante_id')) {
+            $updatesStatusCiclo['status_acesso_estudante_id'] = !empty($this->status_acesso_estudante_id) ? (int) $this->status_acesso_estudante_id : null;
+        }
+        if (!empty($updatesStatusCiclo)) {
+            Ciclo::where('id', $this->cicloIdEmEdicao)->update($updatesStatusCiclo);
         }
 
         foreach ($this->documentosExigidos as $docData) {
@@ -480,6 +492,12 @@ class PeriodManager extends Component
     {
         //abort_if(!feature('ciclo.excluir'), 403);
         //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.excluir'), 403);
+
+        $ciclo = Ciclo::findOrFail($id);
+        if ($ciclo->encerrado) {
+            $this->dispatch('erro', msg: 'Ação Bloqueada: Este ciclo está marcado como Encerrado e permite apenas visualização.');
+            return;
+        }
         
         // Impede que um ciclo que tenha inscrições (mesmo que na lixeira) seja deletado e quebre o sistema
         $emUso = \App\Models\Inscricao::withTrashed()->where('ciclo_id', $id)->exists();
@@ -488,7 +506,7 @@ class PeriodManager extends Component
             return;
         }
 
-        Ciclo::findOrFail($id)->delete();
+        $ciclo->delete();
         
         if (($key = array_search((string)$id, $this->selecionadas)) !== false || ($key = array_search((int)$id, $this->selecionadas)) !== false) {
             unset($this->selecionadas[$key]);
@@ -508,6 +526,18 @@ class PeriodManager extends Component
         $ciclo->save();
 
         $msg = $ciclo->bloqueado ? 'Ciclo bloqueado! Inscrições congeladas para alteração direta.' : 'Ciclo desbloqueado com sucesso!';
+        $this->dispatch('sucesso', msg: $msg);
+    }
+
+    public function toggleEncerrado(int $id): void
+    {
+        $ciclo = Ciclo::findOrFail($id);
+        $ciclo->encerrado = !$ciclo->encerrado;
+        $ciclo->save();
+
+        $msg = $ciclo->encerrado
+            ? 'Ciclo encerrado! A edição das configurações do ciclo e do formulário foi bloqueada (inscrições permanecem editáveis).'
+            : 'Ciclo reaberto para edições de configuração!';
         $this->dispatch('sucesso', msg: $msg);
     }
 

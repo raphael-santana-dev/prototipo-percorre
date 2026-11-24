@@ -26,6 +26,7 @@ class FormBuilderService
                 'isCicloCustomizado' => $isCustom,
                 'badge'              => $isCustom ? 'Projeto Customizado' : 'Inscrição Oficial',
                 'slug'               => $model->slug ?? '',
+                'encerrado'          => (bool) ($model->encerrado ?? false),
             ];
         }
 
@@ -51,6 +52,7 @@ class FormBuilderService
             'isCicloCustomizado' => false,
             'badge'              => $badge,
             'slug'               => $model->slug ?? '',
+            'encerrado'          => (bool) ($model->encerrado ?? false),
         ];
     }
 

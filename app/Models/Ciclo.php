@@ -11,7 +11,7 @@ class Ciclo extends Model
     protected $fillable = [
         'nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 
         'data_inicio_matricula', 'data_fim_matricula',
-        'status', 'regras_pontuacao', 'slug', 'bloqueado', 'tipo_ciclo', 'slug_projeto', 'status_documentacao_id','encerrado'
+        'status', 'regras_pontuacao', 'slug', 'bloqueado', 'tipo_ciclo', 'slug_projeto', 'status_documentacao_id','encerrado', 'liberar_acesso_estudante','status_acesso_estudante_id','liberar_acesso_estudante'
     ];
 
     protected $casts = [
@@ -20,6 +20,7 @@ class Ciclo extends Model
         'status' => 'boolean',
         'regras_pontuacao' => 'array',
         'bloqueado' => 'boolean',
+        'liberar_acesso_estudante' => 'boolean'
     ];
 
     public function inscricoes()

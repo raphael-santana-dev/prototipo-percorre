@@ -8,6 +8,7 @@ use Livewire\Attributes\Title;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\Curso;
@@ -36,19 +37,26 @@ class UserManager extends Component
     public string $email = '';
     public string $codigo_protheus = '';
     public string $password = '';
-    
+
     public ?int $userId = null;
     public bool $isEditMode = false;
     public bool $showModal = false;
 
-    // --- ETAPA 2: ROLE, UNIDADES/CURSOS/TURNOS E CENTROS DE CUSTO ---
+    // --- ETAPA 2: ROLE, TRAVA POR VÍNCULO (UNIDADE/CURSO/TURNO) E CENTROS DE CUSTO ---
     public string $roleName = '';
     public array $rolePermissionsIds = [];
     public array $rolePermissionsPorModulo = [];
 
+    public bool $travar_por_vinculo = false;
+
+    // Chaves compostas idênticas ao CRUD de Ciclos:
+    // $unidadesSelecionadas = ['1', '2']
+    // $cursosSelecionados   = ['1-3', '2-5'] ("{unidadeId}-{cursoId}")
+    // $turnosSelecionados   = ['1-3-1', '1-3-2'] ("{unidadeId}-{cursoId}-{turnoId}")
     public array $unidadesSelecionadas = [];
     public array $cursosSelecionados = [];
     public array $turnosSelecionados = [];
+    public array $expiracoesVinculos = []; // ['1-3-1' => '2026-12-31']
 
     public $activeUnidadeId = null;
     public $activeCursoId = null;
@@ -63,9 +71,6 @@ class UserManager extends Component
     public array $centrosCustoAprovacaoSelecionados = [];
     public array $expiracoesCentrosCustoAprovacao = [];
 
-    public $cursosFiltrados = [];
-    public $turnosFiltrados = [];
-
     // --- ETAPA 3: PERMISSÕES EXTRAS ---
     public array $selectedExtraPermissions = [];
     public array $extraPermissionExpirations = [];
@@ -76,9 +81,6 @@ class UserManager extends Component
 
     public function mount()
     {
-        //abort_if(!feature('usuario.listar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.listar'), 403);
-
         Permission::firstOrCreate(
             ['name' => 'financeiro.visao_global.edicao', 'guard_name' => 'web'],
             ['module' => 'financeiro', 'description' => 'Acesso global a todos os centros de custo para EDIÇÃO de orçamentos']
@@ -96,21 +98,151 @@ class UserManager extends Component
     public function openModal()
     {
         $this->resetInputFields();
-        $this->aplicarRegrasCascata();
         $this->showModal = true;
     }
 
-    public function setActiveUnidade($id)
+    public function setActiveUnidade($id): void
     {
         $this->activeUnidadeId = $id;
         $this->activeCursoId = null;
-        $this->aplicarRegrasCascata();
     }
 
-    public function setActiveCurso($id)
+    public function setActiveCurso($id): void
     {
         $this->activeCursoId = $id;
-        $this->aplicarRegrasCascata();
+    }
+
+    /**
+     * Quando desmarca uma Unidade, remove os cursos e turnos daquela Unidade.
+     */
+    public function updatedUnidadesSelecionadas(): void
+    {
+        $ativas = array_values(array_unique(array_map('strval', $this->unidadesSelecionadas)));
+        $this->unidadesSelecionadas = $ativas;
+
+        $this->cursosSelecionados = array_values(array_filter($this->cursosSelecionados, function ($v) use ($ativas) {
+            [$uId] = explode('-', (string) $v, 2);
+            return in_array($uId, $ativas, true);
+        }));
+
+        $this->turnosSelecionados = array_values(array_filter($this->turnosSelecionados, function ($v) use ($ativas) {
+            [$uId] = explode('-', (string) $v, 3);
+            return in_array($uId, $ativas, true);
+        }));
+    }
+
+    /**
+     * Quando marca/desmarca um Curso ("{uId}-{cId}"), garante a Unidade marcada ou limpa os turnos daquele curso.
+     */
+    public function updatedCursosSelecionados(): void
+    {
+        $cursosAtivos = array_values(array_unique(array_map('strval', $this->cursosSelecionados)));
+        $this->cursosSelecionados = $cursosAtivos;
+
+        foreach ($cursosAtivos as $cKey) {
+            if (str_contains($cKey, '-')) {
+                [$uId] = explode('-', $cKey, 2);
+                if (!in_array($uId, $this->unidadesSelecionadas, true)) {
+                    $this->unidadesSelecionadas[] = $uId;
+                }
+            }
+        }
+
+        $this->turnosSelecionados = array_values(array_filter($this->turnosSelecionados, function ($v) use ($cursosAtivos) {
+            $p = explode('-', (string) $v);
+            return count($p) === 3 && in_array("{$p[0]}-{$p[1]}", $cursosAtivos, true);
+        }));
+    }
+
+    /**
+     * Quando marca/desmarca um Turno ("{uId}-{cId}-{tId}"), marca automaticamente o Curso e a Unidade.
+     */
+    public function updatedTurnosSelecionados(): void
+    {
+        $this->turnosSelecionados = array_values(array_unique(array_map('strval', $this->turnosSelecionados)));
+
+        foreach ($this->turnosSelecionados as $tKey) {
+            $p = explode('-', (string) $tKey);
+            if (count($p) === 3) {
+                [$uId, $cId] = $p;
+                $chaveCurso = "{$uId}-{$cId}";
+                if (!in_array($uId, $this->unidadesSelecionadas, true)) {
+                    $this->unidadesSelecionadas[] = $uId;
+                }
+                if (!in_array($chaveCurso, $this->cursosSelecionados, true)) {
+                    $this->cursosSelecionados[] = $chaveCurso;
+                }
+            }
+        }
+    }
+
+    public function removerCombinacaoVinculo(string $comboKey): void
+    {
+        $this->turnosSelecionados = array_values(array_diff($this->turnosSelecionados, [$comboKey]));
+        unset($this->expiracoesVinculos[$comboKey]);
+    }
+
+    public function contarTurnosDoCursoNaUnidade(int $unidadeId, int $cursoId): int
+    {
+        $prefixo = "{$unidadeId}-{$cursoId}-";
+        return count(array_filter($this->turnosSelecionados, fn($v) => str_starts_with((string) $v, $prefixo)));
+    }
+
+    public function obterTurnosDoCursoNaUnidade(int $unidadeId, int $cursoId)
+    {
+        if (Schema::hasTable('unidade_curso_turno')) {
+            $idsTurnos = DB::table('unidade_curso_turno')
+                ->where('unidade_id', $unidadeId)
+                ->where('curso_id', $cursoId)
+                ->pluck('turno_id')
+                ->toArray();
+
+            if (!empty($idsTurnos)) {
+                return Turno::whereIn('id', $idsTurnos)
+                    ->where('status', true)
+                    ->orderBy('horario_inicio')
+                    ->get();
+            }
+        }
+
+        $curso = Curso::with('turnosVinculados')->find($cursoId);
+        if (!$curso) {
+            return collect();
+        }
+
+        return method_exists($curso, 'turnosNaUnidade')
+            ? $curso->turnosNaUnidade($unidadeId)
+            : $curso->turnosVinculados;
+    }
+
+    public function getCombinacoesVinculoDetalhadasProperty(): array
+    {
+        if (empty($this->turnosSelecionados)) {
+            return [];
+        }
+
+        $unidadesMap = Unidade::pluck('nome', 'id');
+        $cursosMap   = Curso::pluck('nome', 'id');
+        $turnosMap   = Turno::pluck('nome', 'id');
+
+        $lista = [];
+        foreach ($this->turnosSelecionados as $combo) {
+            $partes = explode('-', (string) $combo);
+            if (count($partes) !== 3) continue;
+
+            [$uId, $cId, $tId] = $partes;
+            $lista[] = [
+                'key'          => $combo,
+                'unidade_id'   => (int) $uId,
+                'unidade_nome' => $unidadesMap[$uId] ?? "Unidade #{$uId}",
+                'curso_id'     => (int) $cId,
+                'curso_nome'   => $cursosMap[$cId] ?? "Curso #{$cId}",
+                'turno_id'     => (int) $tId,
+                'turno_nome'   => $turnosMap[$tId] ?? "Turno #{$tId}",
+            ];
+        }
+
+        return $lista;
     }
 
     // --- NAVEGAÇÃO DO WIZARD ---
@@ -151,8 +283,8 @@ class UserManager extends Component
     private function validarEtapa1(): void
     {
         $rules = [
-            'name' => 'required|string|min:3|max:255',
-            'email' => 'required|email|unique:users,email' . ($this->userId ? ',' . $this->userId : ''),
+            'name'            => 'required|string|min:3|max:255',
+            'email'           => 'required|email|unique:users,email' . ($this->userId ? ',' . $this->userId : ''),
             'codigo_protheus' => 'nullable|string|max:50',
         ];
 
@@ -168,66 +300,27 @@ class UserManager extends Component
     private function validarEtapa2(): void
     {
         $rules = [
-            'roleName' => 'required|string|exists:roles,name',
-            'unidadesSelecionadas' => 'nullable|array',
-            'cursosSelecionados' => 'nullable|array',
-            'turnosSelecionados' => 'nullable|array',
-            'centrosCustoEdicaoSelecionados' => 'nullable|array',
+            'roleName'                          => 'required|string|exists:roles,name',
+            'travar_por_vinculo'                => 'boolean',
+            'turnosSelecionados'                => $this->travar_por_vinculo ? 'required|array|min:1' : 'nullable|array',
+            'centrosCustoEdicaoSelecionados'    => 'nullable|array',
             'centrosCustoAprovacaoSelecionados' => 'nullable|array',
-            'acessoGlobalEdicao' => 'boolean',
-            'acessoGlobalAprovacao' => 'boolean',
+            'acessoGlobalEdicao'                => 'boolean',
+            'acessoGlobalAprovacao'             => 'boolean',
         ];
 
         $messages = [
-            'roleName.required' => 'Selecione um Grupo Principal (Role) para o usuário.',
+            'roleName.required'           => 'Selecione um Grupo Principal (Role) para o usuário.',
+            'turnosSelecionados.required' => 'Como a opção "Travar por vínculo" está ativa, selecione pelo menos uma combinação de Unidade, Curso e Turno.',
+            'turnosSelecionados.min'      => 'Selecione pelo menos uma combinação completa de Unidade, Curso e Turno.',
         ];
-
-        // Se o usuário selecionou alguma unidade, exige que vincule pelo menos um curso e um turno correspondente
-        if (!empty($this->unidadesSelecionadas)) {
-            $rules['cursosSelecionados'] = 'required|array|min:1';
-            $rules['turnosSelecionados'] = 'required|array|min:1';
-            $messages['cursosSelecionados.required'] = 'Selecione ao menos um Curso vinculado à(s) unidade(s) escolhida(s).';
-            $messages['cursosSelecionados.min'] = 'Selecione ao menos um Curso vinculado à(s) unidade(s) escolhida(s).';
-            $messages['turnosSelecionados.required'] = 'Selecione ao menos um Turno vinculado ao(s) curso(s) escolhido(s).';
-            $messages['turnosSelecionados.min'] = 'Selecione ao menos um Turno vinculado ao(s) curso(s) escolhido(s).';
-        }
 
         $this->validate($rules, $messages);
     }
 
-    // --- REATIVIDADE DE ROLE E VÍNCULOS ---
     public function updatedRoleName()
     {
         $this->carregarPermissoesDaRole();
-        $this->aplicarRegrasCascata();
-    }
-
-    public function updatedUnidadesSelecionadas()
-    {
-        $this->unidadesSelecionadas = array_values(array_filter(array_map('strval', $this->unidadesSelecionadas)));
-
-        if (empty($this->unidadesSelecionadas)) {
-            $this->activeUnidadeId = null;
-            $this->activeCursoId = null;
-        } elseif (!$this->activeUnidadeId || !in_array((string) $this->activeUnidadeId, $this->unidadesSelecionadas)) {
-            $this->activeUnidadeId = $this->unidadesSelecionadas[0];
-            $this->activeCursoId = null;
-        }
-
-        $this->aplicarRegrasCascata();
-    }
-
-    public function updatedCursosSelecionados()
-    {
-        $this->cursosSelecionados = array_values(array_filter(array_map('strval', $this->cursosSelecionados)));
-
-        if (empty($this->cursosSelecionados)) {
-            $this->activeCursoId = null;
-        } elseif (!$this->activeCursoId || !in_array((string) $this->activeCursoId, $this->cursosSelecionados)) {
-            $this->activeCursoId = $this->cursosSelecionados[0];
-        }
-
-        $this->aplicarRegrasCascata();
     }
 
     public function carregarPermissoesDaRole(): void
@@ -250,8 +343,8 @@ class UserManager extends Component
         foreach ($role->permissions->sortBy('name') as $perm) {
             $modulo = strtoupper($perm->module ?: explode('.', $perm->name)[0] ?? 'GERAL');
             $agrupadas[$modulo][] = [
-                'id' => $perm->id,
-                'name' => $perm->name,
+                'id'          => $perm->id,
+                'name'        => $perm->name,
                 'description' => $perm->description,
             ];
         }
@@ -264,86 +357,21 @@ class UserManager extends Component
         ));
     }
 
-    public function aplicarRegrasCascata(): void
-    {
-        $unidadesIds = array_values(array_filter(array_map('intval', $this->unidadesSelecionadas)));
-
-        if (empty($unidadesIds)) {
-            $this->cursosFiltrados = collect();
-            $this->turnosFiltrados = collect();
-            $this->cursosSelecionados = [];
-            $this->turnosSelecionados = [];
-            $this->activeUnidadeId = null;
-            $this->activeCursoId = null;
-            return;
-        }
-
-        if (!$this->activeUnidadeId || !in_array((int) $this->activeUnidadeId, $unidadesIds)) {
-            $this->activeUnidadeId = $unidadesIds[0];
-        }
-
-        $cursosDasUnidadesMarcadas = Curso::with(['unidades', 'turnosVinculados'])
-            ->whereIn('status', ['Ativo', 'ativo', '1', true])
-            ->whereHas('unidades', function ($q) use ($unidadesIds) {
-                $q->whereIn('unidades.id', $unidadesIds);
-            })
-            ->orderBy('nome')
-            ->get();
-
-        $idsCursosPermitidos = $cursosDasUnidadesMarcadas->pluck('id')->map(fn($id) => (string) $id)->toArray();
-        $this->cursosSelecionados = array_values(array_intersect(array_map('strval', $this->cursosSelecionados), $idsCursosPermitidos));
-
-        $this->cursosFiltrados = $cursosDasUnidadesMarcadas->filter(function ($curso) {
-            return $curso->unidades->contains('id', (int) $this->activeUnidadeId);
-        })->values();
-
-        $cursosDaUnidadeAtivaIds = $this->cursosFiltrados->pluck('id')->map(fn($id) => (string) $id)->toArray();
-        if (!$this->activeCursoId || !in_array((string) $this->activeCursoId, $cursosDaUnidadeAtivaIds)) {
-            $marcadosNaUnidadeAtiva = array_values(array_intersect($this->cursosSelecionados, $cursosDaUnidadeAtivaIds));
-            $this->activeCursoId = $marcadosNaUnidadeAtiva[0] ?? ($cursosDaUnidadeAtivaIds[0] ?? null);
-        }
-
-        if (!empty($this->cursosSelecionados)) {
-            $cursosMarcadosModels = $cursosDasUnidadesMarcadas->whereIn('id', array_map('intval', $this->cursosSelecionados));
-            $idsTurnosPermitidos = $cursosMarcadosModels
-                ->flatMap(fn($c) => $c->turnosVinculados)
-                ->pluck('id')
-                ->unique()
-                ->map(fn($id) => (string) $id)
-                ->toArray();
-
-            $this->turnosSelecionados = array_values(array_intersect(array_map('strval', $this->turnosSelecionados), $idsTurnosPermitidos));
-        } else {
-            $this->turnosSelecionados = [];
-        }
-
-        if ($this->activeCursoId) {
-            $cursoAtivoObj = $cursosDasUnidadesMarcadas->firstWhere('id', (int) $this->activeCursoId);
-            $this->turnosFiltrados = $cursoAtivoObj ? $cursoAtivoObj->turnosVinculados->sortBy('nome')->values() : collect();
-        } else {
-            $this->turnosFiltrados = collect();
-        }
-    }
-
     public function save()
     {
-        if ($this->isEditMode) {
-            //abort_if(!feature('usuario.editar'), 403);
-            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.editar'), 403);
-        } else {
-            //abort_if(!feature('usuario.criar'), 403);
-            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.criar'), 403);
-        }
-
         $this->validarEtapa1();
         $this->validarEtapa2();
 
         $data = [
-            'name' => $this->name,
-            'email' => strtolower($this->email),
+            'name'            => $this->name,
+            'email'           => strtolower(trim($this->email)),
             'codigo_protheus' => $this->codigo_protheus,
-            'slug' => Str::slug($this->name),
+            'slug'            => Str::slug($this->name),
         ];
+
+        if (Schema::hasColumn('users', 'travar_por_vinculo')) {
+            $data['travar_por_vinculo'] = (bool) $this->travar_por_vinculo;
+        }
 
         if (!empty($this->password)) {
             $data['password'] = Hash::make($this->password);
@@ -364,10 +392,50 @@ class UserManager extends Component
         // 1. Sincroniza Role Principal
         $user->syncRoles([$this->roleName]);
 
-        // 2. Sincroniza Unidades, Cursos e Turnos
-        $user->unidades()->sync($this->unidadesSelecionadas);
-        $user->cursos()->sync($this->cursosSelecionados);
-        $user->turnos()->sync($this->turnosSelecionados);
+        // 2. Sincroniza Combinações Exatas (Unidade + Curso + Turno + Prazo) na tabela user_vinculos_academicos
+        if (Schema::hasTable('user_vinculos_academicos')) {
+            DB::table('user_vinculos_academicos')->where('user_id', $user->id)->delete();
+
+            if ($this->travar_por_vinculo && !empty($this->turnosSelecionados)) {
+                $rowsInsert = [];
+                foreach (array_unique($this->turnosSelecionados) as $combo) {
+                    $partes = explode('-', (string) $combo);
+                    if (count($partes) !== 3) continue;
+
+                    [$uId, $cId, $tId] = $partes;
+                    $expira = !empty($this->expiracoesVinculos[$combo]) ? $this->expiracoesVinculos[$combo] : null;
+
+                    $rowsInsert[] = [
+                        'user_id'    => $user->id,
+                        'unidade_id' => (int) $uId,
+                        'curso_id'   => (int) $cId,
+                        'turno_id'   => (int) $tId,
+                        'expires_at' => $expira,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+
+                if (!empty($rowsInsert)) {
+                    DB::table('user_vinculos_academicos')->insert($rowsInsert);
+                }
+            }
+        }
+
+        // Mantém sincronia nas tabelas auxiliares para compatibilidade
+        if ($this->travar_por_vinculo && !empty($this->turnosSelecionados)) {
+            $unidadesUnicas = collect($this->turnosSelecionados)->map(fn($v) => (int) (explode('-', (string) $v)[0] ?? 0))->unique()->filter()->values()->toArray();
+            $cursosUnicos   = collect($this->turnosSelecionados)->map(fn($v) => (int) (explode('-', (string) $v)[1] ?? 0))->unique()->filter()->values()->toArray();
+            $turnosUnicos   = collect($this->turnosSelecionados)->map(fn($v) => (int) (explode('-', (string) $v)[2] ?? 0))->unique()->filter()->values()->toArray();
+
+            $user->unidades()->sync($unidadesUnicas);
+            $user->cursos()->sync($cursosUnicos);
+            $user->turnos()->sync($turnosUnicos);
+        } else {
+            $user->unidades()->detach();
+            $user->cursos()->detach();
+            $user->turnos()->detach();
+        }
 
         // 3. Sincroniza Centros de Custo separados por 'edicao' e 'aprovacao'
         DB::table('centro_custo_user')->where('user_id', $user->id)->delete();
@@ -408,7 +476,7 @@ class UserManager extends Component
             DB::table('centro_custo_user')->insert($registrosPivotCC);
         }
 
-        // 4. Sincroniza Permissões Extras + Permissões Globais de Centro de Custo (Edição / Aprovação)
+        // 4. Sincroniza Permissões Extras + Permissões Globais de Centro de Custo
         $permGlobalEdicao = Permission::firstOrCreate(
             ['name' => 'financeiro.visao_global.edicao', 'guard_name' => 'web'],
             ['module' => 'financeiro', 'description' => 'Acesso global a todos os centros de custo para EDIÇÃO de orçamentos']
@@ -476,28 +544,64 @@ class UserManager extends Component
         $this->email = $user->email;
         $this->codigo_protheus = $user->codigo_protheus ?? '';
         $this->password = '';
+        $this->travar_por_vinculo = (bool) ($user->travar_por_vinculo ?? false);
 
         $this->roleName = $user->roles->first()?->name ?? '';
         $this->carregarPermissoesDaRole();
 
-        $this->unidadesSelecionadas = $user->unidades->pluck('id')->map(fn($id) => (string) $id)->toArray();
-        $this->cursosSelecionados = $user->cursos->pluck('id')->map(fn($id) => (string) $id)->toArray();
-        $this->turnosSelecionados = $user->turnos->pluck('id')->map(fn($id) => (string) $id)->toArray();
+        // Carrega as combinações exatas de user_vinculos_academicos
+        $vinculosSalvos = Schema::hasTable('user_vinculos_academicos')
+            ? DB::table('user_vinculos_academicos')->where('user_id', $user->id)->get()
+            : collect();
 
-        $this->activeUnidadeId = $this->unidadesSelecionadas[0] ?? null;
-        $this->activeCursoId = $this->cursosSelecionados[0] ?? null;
+        if ($vinculosSalvos->isNotEmpty()) {
+            $this->travar_por_vinculo = true;
+            foreach ($vinculosSalvos as $v) {
+                $uId = (string) $v->unidade_id;
+                $cId = (string) $v->curso_id;
+                $tId = (string) $v->turno_id;
+                $comboKey = "{$uId}-{$cId}-{$tId}";
 
-        $this->aplicarRegrasCascata();
+                if (!in_array($uId, $this->unidadesSelecionadas, true)) {
+                    $this->unidadesSelecionadas[] = $uId;
+                }
+                if (!in_array("{$uId}-{$cId}", $this->cursosSelecionados, true)) {
+                    $this->cursosSelecionados[] = "{$uId}-{$cId}";
+                }
+                if (!in_array($comboKey, $this->turnosSelecionados, true)) {
+                    $this->turnosSelecionados[] = $comboKey;
+                }
+                if (!empty($v->expires_at)) {
+                    $this->expiracoesVinculos[$comboKey] = \Carbon\Carbon::parse($v->expires_at)->format('Y-m-d');
+                }
+            }
+        } elseif ($user->unidades->isNotEmpty()) {
+            // Fallback para registros antigos que só estavam nas tabelas separadas
+            $this->travar_por_vinculo = true;
+            foreach ($user->unidades as $u) {
+                $this->unidadesSelecionadas[] = (string) $u->id;
+                foreach ($user->cursos as $c) {
+                    $this->cursosSelecionados[] = "{$u->id}-{$c->id}";
+                    foreach ($user->turnos as $t) {
+                        $this->turnosSelecionados[] = "{$u->id}-{$c->id}-{$t->id}";
+                    }
+                }
+            }
+        }
+
+        if (!empty($this->unidadesSelecionadas)) {
+            $this->activeUnidadeId = (int) $this->unidadesSelecionadas[0];
+            $primeiroCurso = collect($this->cursosSelecionados)->first(fn($c) => str_starts_with($c, "{$this->activeUnidadeId}-"));
+            if ($primeiroCurso) {
+                [, $cAtivo] = explode('-', $primeiroCurso, 2);
+                $this->activeCursoId = (int) $cAtivo;
+            }
+        }
 
         $this->acessoGlobalEdicao = $user->permissions->contains('name', 'financeiro.visao_global.edicao')
             || $user->permissions->contains('name', 'financeiro.visao_global');
         $this->acessoGlobalAprovacao = $user->permissions->contains('name', 'financeiro.visao_global.aprovacao')
             || $user->permissions->contains('name', 'financeiro.visao_global');
-
-        $this->centrosCustoEdicaoSelecionados = [];
-        $this->expiracoesCentrosCustoEdicao = [];
-        $this->centrosCustoAprovacaoSelecionados = [];
-        $this->expiracoesCentrosCustoAprovacao = [];
 
         foreach ($user->centros_de_custo as $cc) {
             $tipo = $cc->pivot->tipo_acesso ?? 'edicao';
@@ -561,9 +665,11 @@ class UserManager extends Component
         $this->userId = null;
         $this->isEditMode = false;
 
+        $this->travar_por_vinculo = false;
         $this->unidadesSelecionadas = [];
         $this->cursosSelecionados = [];
         $this->turnosSelecionados = [];
+        $this->expiracoesVinculos = [];
         $this->activeUnidadeId = null;
         $this->activeCursoId = null;
 
@@ -586,9 +692,11 @@ class UserManager extends Component
     {
         $user = User::with(['roles', 'unidades', 'cursos', 'turnos', 'centros_de_custo_edicao', 'centros_de_custo_aprovacao', 'permissions'])->findOrFail($id);
 
-        $unidadesStr = $user->unidades->count() > 0 ? implode(', ', $user->unidades->pluck('nome')->toArray()) : 'Não restrito';
-        $cursosStr = $user->cursos->count() > 0 ? implode(', ', $user->cursos->pluck('nome')->toArray()) : 'Não restrito';
-        
+        $combinacoesAtivas = $user->obterCombinacoesVinculoAtivas();
+        $escopoAcademico = $user->possuiTravaPorVinculoAtiva()
+            ? count($combinacoesAtivas) . ' combinação(ões) ativa(s) (Restrito por Vínculo)'
+            : 'Global (Sem trava por vínculo)';
+
         $ccEdicao = $user->possuiVisaoGlobalCentrosCusto('edicao')
             ? 'Global (Todos)'
             : ($user->centros_de_custo_edicao->count() > 0 ? implode(', ', $user->centros_de_custo_edicao->pluck('codigo')->toArray()) : 'Nenhum');
@@ -604,23 +712,22 @@ class UserManager extends Component
         ])->count();
 
         $detalhes = [
-            'Nome Completo' => $user->name,
-            'E-mail' => $user->email,
-            'Código Protheus' => $user->codigo_protheus ?: 'Não vinculado',
+            'Nome Completo'          => $user->name,
+            'E-mail'                 => $user->email,
+            'Código Protheus'        => $user->codigo_protheus ?: 'Não vinculado',
             'Grupo Principal (Role)' => strtoupper($user->roles->first()?->name ?? 'Sem grupo'),
-            'Unidades Vinculadas' => $unidadesStr,
-            'Cursos Vinculados' => $cursosStr,
-            'C. Custo (Edição)' => $ccEdicao,
-            'C. Custo (Aprovação)' => $ccAprovacao,
-            'Permissões Extras' => $qtdExtras > 0 ? "{$qtdExtras} permissão(ões) avulsa(s)" : 'Nenhuma (Apenas Role)',
-            'Criado em' => $user->created_at->format('d/m/Y H:i'),
+            'Escopo Acadêmico'       => $escopoAcademico,
+            'C. Custo (Edição)'      => $ccEdicao,
+            'C. Custo (Aprovação)'   => $ccAprovacao,
+            'Permissões Extras'      => $qtdExtras > 0 ? "{$qtdExtras} permissão(ões) avulsa(s)" : 'Nenhuma (Apenas Role)',
+            'Criado em'              => $user->created_at->format('d/m/Y H:i'),
         ];
 
         $this->dispatch('load-quick-view', [
-            'title' => 'Perfil do Usuário',
-            'icon' => 'ph-user-circle',
-            'data' => $detalhes,
-            'subtitle' => 'Visualização rápida de dados e escopo'
+            'title'    => 'Perfil do Usuário',
+            'icon'     => 'ph-user-circle',
+            'data'     => $detalhes,
+            'subtitle' => 'Visualização rápida de dados e escopo',
         ]);
     }
 
@@ -654,10 +761,11 @@ class UserManager extends Component
         }
 
         return view('livewire.corporate.user-manager', [
-            'registros' => $query->paginate($this->porPagina),
-            'roles' => Role::orderBy('name')->get(),
-            'todasUnidades' => Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get(),
-            'todosCentrosCusto' => CentroCusto::where('disponivel_orcamento', true)->orderBy('codigo')->get(),
+            'registros'           => $query->paginate($this->porPagina),
+            'roles'               => Role::orderBy('name')->get(),
+            'todasUnidades'       => Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get(),
+            'cursosDb'            => Curso::with(['unidades', 'turnosVinculados'])->whereIn('status', ['Ativo', '1', true])->orderBy('nome')->get(),
+            'todosCentrosCusto'   => CentroCusto::where('disponivel_orcamento', true)->orderBy('codigo')->get(),
             'permissionsByModule' => $permissoesQuery->get()->groupBy('module'),
         ]);
     }

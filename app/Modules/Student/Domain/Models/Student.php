@@ -68,6 +68,24 @@ class Student extends Authenticatable implements CanResetPasswordContract
     {
         return $this->hasMany(\App\Models\Inscricao::class, 'student_id');
     }
+
+    public function sincronizarInscricoesVinculadas(): void
+    {
+        $cpfLimpo = preg_replace('/\D/', '', (string) $this->cpf);
+        $emailLimpo = strtolower(trim((string) $this->email));
+
+        \App\Models\Inscricao::whereNull('student_id')
+            ->where(function ($q) use ($cpfLimpo, $emailLimpo) {
+                if ($emailLimpo !== '') {
+                    $q->orWhereRaw('LOWER(email) = ?', [$emailLimpo]);
+                }
+                if (strlen($cpfLimpo) === 11) {
+                    $q->orWhereRaw("REGEXP_REPLACE(cpf, '[^0-9]', '', 'g') = ?", [$cpfLimpo]);
+                }
+            })
+            ->update(['student_id' => $this->id]);
+    }
+
     public function sendPasswordResetNotification($token)
     {
         $this->notify(new CustomResetPasswordNotification($token));

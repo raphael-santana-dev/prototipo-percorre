@@ -21,6 +21,8 @@ use App\Modules\Matricula\Domain\Models\DocumentoExigido;
 use App\Modules\Matricula\Domain\Models\DocumentoMatricula;
 use App\Modules\Matricula\Services\AiValidationService;
 use App\Traits\ComPadraoListagem;
+use App\Traits\WithEditingLock;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Crypt;
@@ -33,6 +35,7 @@ class RegistrationDetails extends Component
     use WithFileUploads;
     use WithPagination;
     use ComPadraoListagem;
+    use WithEditingLock;
     use \App\Traits\WithFichaPdfDownload;
 
     public Inscricao $inscricao;
@@ -72,6 +75,13 @@ class RegistrationDetails extends Component
 
     public $laudoPcdAssistidoUpload = null;
 
+    public bool $modalTrocaVinculoAberto = false;
+    public $trocaUnidadeId = '';
+    public $trocaCursoId = '';
+    public $trocaTurnoId = '';
+    public bool $trocaIgnorarOfertasCiclo = false;
+    public string $trocaMotivo = '';
+
     public function mount($id)
     {
         $this->inscricao = Inscricao::with(['unidade', 'curso', 'turno', 'ciclo'])->findOrFail($id);
@@ -79,6 +89,7 @@ class RegistrationDetails extends Component
         
         $this->carregarDadosEdicao();
         $this->carregarStatusArquivos();
+        $this->verificarLockInscricao();
 
         // Inicialização das variáveis herdadas da trait ComPadraoListagem para a Tabela de Formulários
         $this->ordenacaoCampo = 'total_preenchimentos';
@@ -86,6 +97,56 @@ class RegistrationDetails extends Component
         $this->porPagina = 10;
         $this->permiteGrid = false;
         $this->modoExibicao = 'lista';
+    }
+
+    /**
+     * Verifica em tempo real (wire:poll.5s) se outro usuário está atualizando esta inscrição.
+     * Só renova/adquire o lock se o usuário atual estiver efetivamente editando.
+     */
+    public function verificarLockInscricao(): void
+    {
+        $lockKey = $this->getLockKey('inscricao', (int) $this->inscricao->id);
+        $currentLock = Cache::get($lockKey);
+        $meuId = (int) auth()->id();
+
+        $estouEditandoAgora = $this->modoEdicaoAssistida || !empty($this->urlEmbedAtiva) || $this->modalTrocaVinculoAberto;
+
+        if ($currentLock && (int) ($currentLock['user_id'] ?? 0) !== $meuId && ($currentLock['expires_at'] ?? 0) > now()->timestamp) {
+            $this->isLockedByOther = true;
+            $this->lockOwnerName   = (string) ($currentLock['user_name'] ?? 'Outro usuário');
+            $this->lockOwnerId     = (int) ($currentLock['user_id'] ?? 0);
+
+            if ($this->modoEdicaoAssistida) {
+                $this->modoEdicaoAssistida = false;
+            }
+            if ($this->modalTrocaVinculoAberto) {
+                $this->modalTrocaVinculoAberto = false;
+            }
+            return;
+        }
+
+        $this->isLockedByOther = false;
+        $this->lockOwnerName   = '';
+        $this->lockOwnerId     = null;
+
+        if ($estouEditandoAgora) {
+            $this->iniciarLockEdicao('inscricao', (int) $this->inscricao->id, 'Dados da Inscrição', 'inscricoes.index');
+        } elseif ($currentLock && (int) ($currentLock['user_id'] ?? 0) === $meuId) {
+            Cache::forget($lockKey);
+            Cache::forget($this->getTransferKey('inscricao', (int) $this->inscricao->id));
+        }
+    }
+
+    protected function bloquearSeEmEdicaoPorOutro(): bool
+    {
+        $this->verificarLockInscricao();
+
+        if ($this->isLockedByOther) {
+            $this->dispatch('erro', msg: "Esta inscrição está em edição por {$this->lockOwnerName}. Apenas visualização está permitida no momento.");
+            return true;
+        }
+
+        return false;
     }
 
     public function updatingSearchFormulario()
@@ -113,6 +174,325 @@ class RegistrationDetails extends Component
         return $user->hasAnyRole(['dev', 'admin'])
             || $user->can('inscricao.editar')
             || $user->can('inscricao.criar');
+    }
+
+    public function usuarioPodeAlterarVinculoAcademico(): bool
+    {
+        $user = auth()->user();
+        if (!$user || $this->inscricao->legado) {
+            return false;
+        }
+
+        return $user->hasAnyRole(['dev', 'admin'])
+            || $user->can('inscricao.edicao.solicitacao_troca')
+            || $user->can('inscricao.alterar_vinculo');
+    }
+
+    public function abrirModalTrocaVinculo(): void
+    {
+        abort_unless($this->usuarioPodeAlterarVinculoAcademico(), 403, 'Sem permissão para alterar Unidade/Curso/Turno.');
+
+        if ($this->bloquearSeEmEdicaoPorOutro()) {
+            return;
+        }
+
+        $temOfertasCiclo = $this->inscricao->ciclo_id
+            && \App\Models\OfertaVaga::where('ciclo_id', $this->inscricao->ciclo_id)->exists();
+
+        $this->trocaIgnorarOfertasCiclo = !$temOfertasCiclo;
+        $this->trocaUnidadeId           = $this->inscricao->unidade_id ? (string) $this->inscricao->unidade_id : '';
+        $this->trocaCursoId             = $this->inscricao->curso_id ? (string) $this->inscricao->curso_id : '';
+        $this->trocaTurnoId             = $this->inscricao->turno_id ? (string) $this->inscricao->turno_id : '';
+        $this->trocaMotivo              = '';
+        $this->resetValidation(['trocaUnidadeId', 'trocaCursoId', 'trocaTurnoId', 'trocaMotivo']);
+
+        $this->modalTrocaVinculoAberto = true;
+        $this->iniciarLockEdicao('inscricao', (int) $this->inscricao->id, 'Troca de Unidade/Curso/Turno', 'inscricoes.index');
+    }
+
+    public function fecharModalTrocaVinculo(): void
+    {
+        $this->modalTrocaVinculoAberto = false;
+        $this->resetValidation(['trocaUnidadeId', 'trocaCursoId', 'trocaTurnoId', 'trocaMotivo']);
+        $this->liberarLockEdicao();
+    }
+
+    public function updatedTrocaIgnorarOfertasCiclo(): void
+    {
+        $this->trocaUnidadeId = '';
+        $this->trocaCursoId   = '';
+        $this->trocaTurnoId   = '';
+    }
+
+    public function updatedTrocaUnidadeId(): void
+    {
+        $this->trocaCursoId = '';
+        $this->trocaTurnoId = '';
+    }
+
+    public function updatedTrocaCursoId(): void
+    {
+        $this->trocaTurnoId = '';
+    }
+
+    #[Computed]
+    public function unidadesDisponiveisTrocaDireta()
+    {
+        if (!$this->trocaIgnorarOfertasCiclo && $this->inscricao->ciclo_id) {
+            $ids = \App\Models\OfertaVaga::where('ciclo_id', $this->inscricao->ciclo_id)
+                ->pluck('unidade_id')
+                ->unique()
+                ->toArray();
+
+            return Unidade::whereIn('id', $ids)->orderBy('nome')->get();
+        }
+
+        return Unidade::whereIn('status', ['Ativa', 'ativa', '1', true])->orderBy('nome')->get();
+    }
+
+    #[Computed]
+    public function cursosDisponiveisTrocaDireta()
+    {
+        if (empty($this->trocaUnidadeId)) {
+            return collect();
+        }
+
+        if (!$this->trocaIgnorarOfertasCiclo && $this->inscricao->ciclo_id) {
+            $ids = \App\Models\OfertaVaga::where('ciclo_id', $this->inscricao->ciclo_id)
+                ->where('unidade_id', (int) $this->trocaUnidadeId)
+                ->pluck('curso_id')
+                ->unique()
+                ->toArray();
+
+            return Curso::whereIn('id', $ids)->orderBy('nome')->get();
+        }
+
+        return Curso::whereIn('status', ['Ativo', 'ativo', '1', true])
+            ->whereHas('unidades', fn($q) => $q->where('unidades.id', (int) $this->trocaUnidadeId))
+            ->orderBy('nome')
+            ->get();
+    }
+
+    #[Computed]
+    public function turnosDisponiveisTrocaDireta()
+    {
+        if (empty($this->trocaUnidadeId) || empty($this->trocaCursoId)) {
+            return collect();
+        }
+
+        if (!$this->trocaIgnorarOfertasCiclo && $this->inscricao->ciclo_id) {
+            $ids = \App\Models\OfertaVaga::where('ciclo_id', $this->inscricao->ciclo_id)
+                ->where('unidade_id', (int) $this->trocaUnidadeId)
+                ->where('curso_id', (int) $this->trocaCursoId)
+                ->pluck('turno_id')
+                ->unique()
+                ->toArray();
+
+            return Turno::whereIn('id', $ids)->orderBy('nome')->get();
+        }
+
+        $curso = Curso::find((int) $this->trocaCursoId);
+        if ($curso && method_exists($curso, 'turnosNaUnidade')) {
+            return $curso->turnosNaUnidade((int) $this->trocaUnidadeId);
+        }
+
+        return Turno::orderBy('nome')->get();
+    }
+
+    #[Computed]
+    public function resumoCompatibilidadeTrocaDireta(): array
+    {
+        $info = [
+            'alerta_uf'    => false,
+            'uf_candidato' => strtoupper(trim((string) ($this->inscricao->estado ?? ''))),
+            'uf_unidade'   => '',
+            'vagas_texto'  => null,
+            'sem_vagas'    => false,
+        ];
+
+        if (!empty($this->trocaUnidadeId)) {
+            $uni = Unidade::find((int) $this->trocaUnidadeId);
+            if ($uni) {
+                $ufUni = strtoupper(trim((string) ($uni->estado ?: explode('-', $uni->nome)[0])));
+                $info['uf_unidade'] = $ufUni;
+                if ($info['uf_candidato'] !== '' && $ufUni !== '' && $info['uf_candidato'] !== $ufUni) {
+                    $info['alerta_uf'] = true;
+                }
+            }
+        }
+
+        if ($this->inscricao->ciclo_id && !empty($this->trocaUnidadeId) && !empty($this->trocaCursoId) && !empty($this->trocaTurnoId)) {
+            $oferta = \App\Models\OfertaVaga::where('ciclo_id', $this->inscricao->ciclo_id)
+                ->where('unidade_id', (int) $this->trocaUnidadeId)
+                ->where('curso_id', (int) $this->trocaCursoId)
+                ->where('turno_id', (int) $this->trocaTurnoId)
+                ->first();
+
+            if ($oferta) {
+                $ocupadas = Inscricao::where('ciclo_id', $this->inscricao->ciclo_id)
+                    ->where('unidade_id', (int) $this->trocaUnidadeId)
+                    ->where('curso_id', (int) $this->trocaCursoId)
+                    ->where('turno_id', (int) $this->trocaTurnoId)
+                    ->where('id', '!=', $this->inscricao->id)
+                    ->whereHas('statusInscricao', fn($q) => $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado', 'Matriculado']))
+                    ->count();
+
+                $restantes = $oferta->vagas - $ocupadas;
+                $info['sem_vagas'] = $restantes <= 0;
+                $info['vagas_texto'] = $restantes <= 0
+                    ? "Sem vagas livres nesta oferta (0 de {$oferta->vagas})."
+                    : "{$restantes} vaga(s) livre(s) de {$oferta->vagas}.";
+            } else {
+                $info['sem_vagas'] = true;
+                $info['vagas_texto'] = 'Combinação sem oferta cadastrada neste ciclo.';
+            }
+        }
+
+        return $info;
+    }
+
+    public function salvarTrocaVinculoDireta(): void
+    {
+        abort_unless($this->usuarioPodeAlterarVinculoAcademico(), 403, 'Sem permissão para alterar Unidade/Curso/Turno.');
+
+        if ($this->bloquearSeEmEdicaoPorOutro()) {
+            return;
+        }
+
+        $this->validate([
+            'trocaUnidadeId' => 'required|exists:unidades,id',
+            'trocaCursoId'   => 'required|exists:cursos,id',
+            'trocaTurnoId'   => 'required|exists:turnos,id',
+            'trocaMotivo'    => 'required|string|min:5|max:500',
+        ], [
+            'trocaUnidadeId.required' => 'Selecione a nova unidade.',
+            'trocaCursoId.required'   => 'Selecione o novo curso.',
+            'trocaTurnoId.required'   => 'Selecione o novo turno.',
+            'trocaMotivo.required'    => 'Informe o motivo da alteração.',
+            'trocaMotivo.min'         => 'Descreva o motivo com pelo menos 5 caracteres.',
+        ]);
+
+        $novaUnidadeId = (int) $this->trocaUnidadeId;
+        $novoCursoId   = (int) $this->trocaCursoId;
+        $novoTurnoId   = (int) $this->trocaTurnoId;
+
+        if (
+            (int) $this->inscricao->unidade_id === $novaUnidadeId &&
+            (int) $this->inscricao->curso_id === $novoCursoId &&
+            (int) $this->inscricao->turno_id === $novoTurnoId
+        ) {
+            $this->dispatch('erro', msg: 'A inscrição já está vinculada a esta combinação de Unidade, Curso e Turno.');
+            return;
+        }
+
+        $operador = auth()->user();
+        $agoraStr = now()->format('d/m/Y H:i');
+
+        $anterior = [
+            'unidade_id'   => $this->inscricao->unidade_id,
+            'unidade_nome' => $this->inscricao->unidade->nome ?? 'Não informada',
+            'curso_id'     => $this->inscricao->curso_id,
+            'curso_nome'   => $this->inscricao->curso->nome ?? 'Não informado',
+            'turno_id'     => $this->inscricao->turno_id,
+            'turno_nome'   => $this->inscricao->turno->nome ?? 'Não informado',
+        ];
+
+        $novaUnidade = Unidade::find($novaUnidadeId);
+        $novoCurso   = Curso::find($novoCursoId);
+        $novoTurno   = Turno::find($novoTurnoId);
+
+        $novo = [
+            'unidade_id'   => $novaUnidadeId,
+            'unidade_nome' => $novaUnidade?->nome ?? '-',
+            'curso_id'     => $novoCursoId,
+            'curso_nome'   => $novoCurso?->nome ?? '-',
+            'turno_id'     => $novoTurnoId,
+            'turno_nome'   => $novoTurno?->nome ?? '-',
+            'motivo'       => trim($this->trocaMotivo),
+        ];
+
+        $dinamicos = is_string($this->inscricao->dados_dinamicos)
+            ? json_decode($this->inscricao->dados_dinamicos, true)
+            : ($this->inscricao->dados_dinamicos ?? []);
+        if (!is_array($dinamicos)) $dinamicos = [];
+
+        $mapa = $dinamicos['_preenchido_por_participante'] ?? [];
+        foreach (['fixo_unidade_id', 'fixo_curso_id', 'fixo_turno_id'] as $kPart) {
+            $mapa[$kPart] = [
+                'user_id'   => $operador->id,
+                'user_nome' => $operador->name,
+                'data'      => $agoraStr,
+            ];
+        }
+        $mapa['_ultimo_atendimento'] = [
+            'user_id'   => $operador->id,
+            'user_nome' => $operador->name,
+            'data'      => $agoraStr,
+            'campos'    => ['unidade_id', 'curso_id', 'turno_id'],
+        ];
+        $dinamicos['_preenchido_por_participante'] = $mapa;
+
+        $this->inscricao->update([
+            'unidade_id'      => $novaUnidadeId,
+            'curso_id'        => $novoCursoId,
+            'turno_id'        => $novoTurnoId,
+            'deseja_informar' => false,
+            'dados_dinamicos' => $dinamicos,
+        ]);
+
+        if ($this->inscricao->student_id) {
+            \App\Modules\Student\Domain\Models\Student::where('id', $this->inscricao->student_id)
+                ->update(['unidade_id' => $novaUnidadeId]);
+
+            try {
+                \App\Models\Solicitacao::create([
+                    'tema'             => 'alteracao_academica',
+                    'solicitante_type' => \App\Modules\Student\Domain\Models\Student::class,
+                    'solicitante_id'   => $this->inscricao->student_id,
+                    'justificativa'    => 'Alteração direta pela equipe: ' . trim($this->trocaMotivo),
+                    'status'           => 'auto_aprovada',
+                    'resposta_admin'   => "Vínculo alterado diretamente por {$operador->name}.",
+                    'responsavel_id'   => $operador->id,
+                    'payload'          => [
+                        'inscricao_id'          => $this->inscricao->id,
+                        'unidade_anterior_id'   => $anterior['unidade_id'],
+                        'unidade_anterior_nome' => $anterior['unidade_nome'],
+                        'curso_anterior_id'     => $anterior['curso_id'],
+                        'curso_anterior_nome'   => $anterior['curso_nome'],
+                        'turno_anterior_id'     => $anterior['turno_id'],
+                        'turno_anterior_nome'   => $anterior['turno_nome'],
+                        'nova_unidade_id'       => $novaUnidadeId,
+                        'nova_unidade_nome'     => $novo['unidade_nome'],
+                        'novo_curso_id'         => $novoCursoId,
+                        'novo_curso_nome'       => $novo['curso_nome'],
+                        'novo_turno_id'         => $novoTurnoId,
+                        'novo_turno_nome'       => $novo['turno_nome'],
+                    ],
+                ]);
+            } catch (\Throwable $e) {}
+        }
+
+        AuditoriaLog::create([
+            'tabela_alterada'     => 'inscricoes',
+            'registro_id'         => $this->inscricao->id,
+            'acao'                => 'alteracao_vinculo_academico_direta',
+            'informacao_anterior' => $anterior,
+            'nova_informacao'     => $novo,
+            'usuario_id'          => $operador->id,
+            'usuario_nome'        => $operador->name,
+            'usuario_role'        => method_exists($operador, 'getRoleNames') ? $operador->getRoleNames()->first() : 'admin',
+            'usuario_login'       => $operador->email,
+            'ip'                  => request()->ip(),
+            'navegador'           => request()->userAgent(),
+        ]);
+
+        $this->inscricao->refresh();
+        $this->carregarDadosEdicao();
+        $this->modalTrocaVinculoAberto = false;
+        $this->liberarLockEdicao();
+        unset($this->logsMovimentacao);
+
+        $this->dispatch('sucesso', msg: 'Unidade, curso e turno da inscrição alterados com sucesso!');
     }
 
     // =========================================================================
@@ -154,13 +534,20 @@ class RegistrationDetails extends Component
     public function iniciarEdicaoAssistida(): void
     {
         abort_unless($this->usuarioPodeEditarAssistido(), 403, 'Sem permissão para edição assistida.');
+
+        if ($this->bloquearSeEmEdicaoPorOutro()) {
+            return;
+        }
+
         $this->carregarDadosEdicao();
         $this->modoEdicaoAssistida = true;
+        $this->iniciarLockEdicao('inscricao', (int) $this->inscricao->id, 'Dados da Inscrição', 'inscricoes.index');
     }
 
     public function cancelarEdicaoAssistida(): void
     {
         $this->modoEdicaoAssistida = false;
+        $this->liberarLockEdicao();
         $this->carregarDadosEdicao();
     }
 
@@ -179,6 +566,10 @@ class RegistrationDetails extends Component
     public function salvarEdicaoAssistida(): void
     {
         abort_unless($this->usuarioPodeEditarAssistido(), 403, 'Sem permissão.');
+
+        if ($this->bloquearSeEmEdicaoPorOutro()) {
+            return;
+        }
 
         $this->validate([
             'formFixo.nome'  => 'required|string|min:3',
@@ -268,9 +659,9 @@ class RegistrationDetails extends Component
             'cidade'               => $this->formFixo['cidade'] ?: null,
             'estado'               => $this->formFixo['estado'] ?: null,
             'regiao'               => $this->formFixo['regiao'] ?: null,
-            'unidade_id'           => !empty($this->formFixo['unidade_id']) ? (int) $this->formFixo['unidade_id'] : null,
-            'curso_id'             => !empty($this->formFixo['curso_id']) ? (int) $this->formFixo['curso_id'] : null,
-            'turno_id'             => !empty($this->formFixo['turno_id']) ? (int) $this->formFixo['turno_id'] : null,
+            'unidade_id'           => $this->usuarioPodeAlterarVinculoAcademico() ? (!empty($this->formFixo['unidade_id']) ? (int) $this->formFixo['unidade_id'] : null) : $this->inscricao->unidade_id,
+            'curso_id'             => $this->usuarioPodeAlterarVinculoAcademico() ? (!empty($this->formFixo['curso_id']) ? (int) $this->formFixo['curso_id'] : null) : $this->inscricao->curso_id,
+            'turno_id'             => $this->usuarioPodeAlterarVinculoAcademico() ? (!empty($this->formFixo['turno_id']) ? (int) $this->formFixo['turno_id'] : null) : $this->inscricao->turno_id,
             'dados_dinamicos'      => $novosDinamicos,
         ]);
 
@@ -297,6 +688,7 @@ class RegistrationDetails extends Component
 
         $this->inscricao->refresh();
         $this->modoEdicaoAssistida = false;
+        $this->liberarLockEdicao();
         unset($this->logsMovimentacao);
 
         $this->dispatch('sucesso', msg: 'Dados da inscrição atualizados com sucesso pelo Participante!');
@@ -385,6 +777,11 @@ class RegistrationDetails extends Component
     {
         abort_unless($this->usuarioPodeEditarAssistido(), 403, 'Sem permissão.');
 
+        if ($this->bloquearSeEmEdicaoPorOutro()) {
+            unset($this->uploads[$documentoExigidoId]);
+            return;
+        }
+
         if (!$this->uploadDocumentacaoHabilitado) {
             unset($this->uploads[$documentoExigidoId]);
             $nomeSt = $this->nomeStatusDocumentacaoExigido ?: 'configurado no ciclo';
@@ -438,9 +835,9 @@ class RegistrationDetails extends Component
                 $docMatricula->status_analise = 'valido_ia';
                 $docMatricula->log_ia = array_merge($resultadoIa['raw'] ?? [], $metaParticipante);
             } else {
-                $docMatricula->status_analise = ($docMatricula->tentativas_ia >= 3) ? 'analise_manual' : 'invalido_ia';
+                $docMatricula->status_analise = 'analise_manual';
                 $docMatricula->log_ia = array_merge([
-                    'motivo_rejeicao' => $resultadoIa['motivo_rejeicao'] ?? 'Rejeitado na validação por IA.',
+                    'motivo_rejeicao' => $resultadoIa['motivo_rejeicao'] ?? 'Recusado pela IA e encaminhado para análise manual.',
                     'raw'             => $resultadoIa['raw'] ?? [],
                 ], $metaParticipante);
             }
@@ -483,6 +880,10 @@ class RegistrationDetails extends Component
     public function aprovarDocumentoManualmente(int $documentoExigidoId): void
     {
         abort_unless($this->usuarioPodeEditarAssistido(), 403);
+
+        if ($this->bloquearSeEmEdicaoPorOutro()) {
+            return;
+        }
 
         $docMatricula = DocumentoMatricula::where('inscricao_id', $this->inscricao->id)
             ->where('documento_exigido_id', $documentoExigidoId)
@@ -625,6 +1026,10 @@ class RegistrationDetails extends Component
     {
         abort_unless($this->usuarioPodeEditarAssistido(), 403);
 
+        if ($this->bloquearSeEmEdicaoPorOutro()) {
+            return;
+        }
+
         $participante = auth()->user();
 
         if ($this->tipoFormularioEmbed === 'inscricao') {
@@ -707,6 +1112,7 @@ class RegistrationDetails extends Component
             'navegador'       => request()->userAgent(),
         ]);
 
+        $this->iniciarLockEdicao('inscricao', (int) $this->inscricao->id, 'Formulário Assistido', 'inscricoes.index');
         unset($this->logsMovimentacao);
     }
 
@@ -714,6 +1120,7 @@ class RegistrationDetails extends Component
     {
         $this->urlEmbedAtiva = null;
         $this->tituloEmbedAtivo = '';
+        $this->liberarLockEdicao();
         $this->inscricao->refresh();
         $this->carregarDadosEdicao();
     }
@@ -783,6 +1190,17 @@ class RegistrationDetails extends Component
                     'data'            => clone $log->created_at,
                     'usuario'         => $log->usuario_nome ?? 'Participante',
                     'mensagem'        => "enviou o documento <b>{$docNome}</b> em nome do candidato (<i>{$modoIa}</i>).",
+                ];
+            } elseif ($log->acao === 'alteracao_vinculo_academico_direta') {
+                $deStr = ($antigo['unidade_nome'] ?? '-') . ' • ' . ($antigo['curso_nome'] ?? '-') . ' (' . ($antigo['turno_nome'] ?? '-') . ')';
+                $paraStr = ($novo['unidade_nome'] ?? '-') . ' • ' . ($novo['curso_nome'] ?? '-') . ' (' . ($novo['turno_nome'] ?? '-') . ')';
+                $motivoStr = !empty($novo['motivo']) ? '<br><span class="text-xs text-gray-500">Motivo: ' . e($novo['motivo']) . '</span>' : '';
+                $movimentacoes[] = [
+                    'tipo'            => 'participante',
+                    'is_participante' => true,
+                    'data'            => clone $log->created_at,
+                    'usuario'         => $log->usuario_nome ?? 'Equipe',
+                    'mensagem'        => "alterou o vínculo acadêmico diretamente de <b>{$deStr}</b> para <b>{$paraStr}</b>.{$motivoStr}",
                 ];
             } elseif ($log->acao === 'formulario_assistido_participante') {
                 $formTitulo = $novo['formulario'] ?? 'Formulário';
@@ -874,6 +1292,11 @@ class RegistrationDetails extends Component
 
     public function atualizarStatus()
     {
+        if ($this->bloquearSeEmEdicaoPorOutro()) {
+            $this->status_selecionado = $this->inscricao->status_inscricao_id;
+            return;
+        }
+
         if ($this->inscricao->status_inscricao_id == $this->status_selecionado) {
             $this->dispatch('erro', msg: 'O candidato já se encontra neste status!');
             return;
@@ -918,6 +1341,12 @@ class RegistrationDetails extends Component
 
     public function executarMudancaStatusFinal()
     {
+        if ($this->bloquearSeEmEdicaoPorOutro()) {
+            $this->modalAntiSpamAberto = false;
+            $this->status_selecionado = $this->inscricao->status_inscricao_id;
+            return;
+        }
+
         $statusNovo = StatusInscricao::find($this->status_selecionado);
 
         $this->inscricao->status_inscricao_id = $statusNovo->id;

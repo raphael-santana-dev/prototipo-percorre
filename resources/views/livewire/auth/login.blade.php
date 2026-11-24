@@ -5,7 +5,7 @@
         
         <div class="relative z-10 text-white text-center px-12 lg:px-24">
             <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" alt="Instituto Percorre" class="h-16 mx-auto mb-10 filter drop-shadow-lg">
-            <h1 class="text-4xl lg:text-5xl font-extrabold tracking-tight mb-6 leading-tight">Bem-vindo(a) ao <br><span class="text-transparent bg-clip-text bg-gradient-to-r from-purpura-400 to-ponkan-400">Portal Percorre</span></h1>
+            <h1 class="text-4xl lg:text-5xl font-extrabold tracking-tight mb-6 leading-tight">Bem-vindo(a) ao <br><span class="bg-clip-text bg-gradient-to-r text-ponkan-400">Portal Percorre</span></h1>
             <p class="text-lg text-white/80 font-medium">Acesse sua conta para continuar sua jornada educacional ou administrativa.</p>
         </div>
     </div>

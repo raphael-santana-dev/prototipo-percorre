@@ -29,7 +29,8 @@ class User extends Authenticatable
         'cpf',
         'slug',
         'codigo_protheus',
-        'must_change_password'
+        'travar_por_vinculo',
+        'must_change_password',
     ];
 
     /**
@@ -50,9 +51,10 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'must_change_password' => 'boolean'
+            'email_verified_at'    => 'datetime',
+            'password'             => 'hashed',
+            'travar_por_vinculo'   => 'boolean',
+            'must_change_password' => 'boolean',
         ];
     }
 
@@ -70,21 +72,71 @@ class User extends Authenticatable
     public function turnos()
     {
         return $this->belongsToMany(\App\Modules\Turno\Domain\Models\Turno::class, 'turno_user');
-    }   
-    
+    }
+
+    /**
+     * Verifica se o usuário está com a opção "Travar por vínculo" ativa.
+     */
+    public function possuiTravaPorVinculoAtiva(): bool
+    {
+        if ($this->hasRole('dev')) {
+            return false;
+        }
+
+        return (bool) ($this->travar_por_vinculo ?? false);
+    }
+
+    /**
+     * Retorna as combinações exatas [unidade_id, curso_id, turno_id] vigentes (não expiradas).
+     */
+    public function obterCombinacoesVinculoAtivas(): array
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('user_vinculos_academicos')) {
+            return [];
+        }
+
+        $hoje = now()->toDateString();
+
+        return \Illuminate\Support\Facades\DB::table('user_vinculos_academicos')
+            ->where('user_id', $this->id)
+            ->where(function ($q) use ($hoje) {
+                $q->whereNull('expires_at')
+                  ->orWhereDate('expires_at', '>=', $hoje);
+            })
+            ->get(['unidade_id', 'curso_id', 'turno_id', 'expires_at'])
+            ->map(fn($r) => [
+                'unidade_id' => (int) $r->unidade_id,
+                'curso_id'   => (int) $r->curso_id,
+                'turno_id'   => (int) $r->turno_id,
+                'expires_at' => $r->expires_at,
+            ])
+            ->toArray();
+    }
+
     public function temVisaoGlobal(?string $modulo = null): bool
     {
-        if ($this->hasRole('dev|admin')) {
+        if ($this->hasRole('dev')) {
+            return true;
+        }
+
+        // Se o usuário estiver marcado com "Travar por vínculo", ele NUNCA tem visão global sobre os módulos acadêmicos/inscrições
+        if ($this->possuiTravaPorVinculoAtiva()) {
+            return false;
+        }
+
+        if ($this->hasRole('admin')) {
             return true;
         }
 
         if ($modulo) {
             $permissaoExata = "{$modulo}.visao_global";
-            
-            return $this->getAllPermissions()->where('name', $permissaoExata)->isNotEmpty();
+            if ($this->getAllPermissions()->where('name', $permissaoExata)->isNotEmpty()) {
+                return true;
+            }
         }
 
-        return false;
+        // Se "Travar por vínculo" NÃO estiver marcado no usuário, o acesso às listagens acadêmicas não sofre corte por vínculo
+        return true;
     }
 
     /**

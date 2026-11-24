@@ -31,7 +31,8 @@ Schedule::command('formularios:processar-fases-liberadas')->everyMinute()->witho
 Schedule::command('comunicacao:processar-esteiras')->everyMinute()->withoutOverlapping();
 Schedule::command('automacoes:processar-gatilhos-temporais')->hourly()->withoutOverlapping();
 
-Schedule::job(new RevogarPermissoesExpiradasJob)->dailyAt('00:00');
+Schedule::command('usuarios:revogar-acessos-expirados')->dailyAt('00:00')->withoutOverlapping();
+
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());

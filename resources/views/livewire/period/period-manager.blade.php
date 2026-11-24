@@ -263,12 +263,19 @@
                 
                 <td class="px-4 py-2 whitespace-nowrap text-center">
                     @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
-                        <button type="button" wire:click="toggleBloqueio({{ $ciclo->id }})" class="p-1.5 rounded border transition-colors {{ $ciclo->bloqueado ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400' : 'bg-white text-gray-400 border-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700' }}" title="{{ $ciclo->bloqueado ? 'Ciclo Bloqueado (Clique para desbloquear)' : 'Ciclo Desbloqueado (Clique para bloquear)' }}">
-                            <i class="text-base ph {{ $ciclo->bloqueado ? 'ph-lock-key' : 'ph-lock-key-open' }}"></i>
-                        </button>
+                        <div class="inline-flex items-center justify-center gap-1.5">
+                            <button type="button" wire:click="toggleBloqueio({{ $ciclo->id }})" class="p-1.5 rounded border transition-colors {{ $ciclo->bloqueado ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400' : 'bg-white text-gray-400 border-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700' }}" title="{{ $ciclo->bloqueado ? 'Inscrições Congeladas (Clique para desbloquear inscrições)' : 'Inscrições Liberadas (Clique para congelar inscrições)' }}">
+                                <i class="text-base ph {{ $ciclo->bloqueado ? 'ph-lock-key' : 'ph-lock-key-open' }}"></i>
+                            </button>
+
+                            <button type="button" wire:click="toggleEncerrado({{ $ciclo->id }})" class="px-2 py-1 rounded border text-[10px] font-bold uppercase transition-colors flex items-center gap-1 {{ $ciclo->encerrado ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-300' : 'bg-white text-gray-400 border-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700' }}" title="{{ $ciclo->encerrado ? 'Ciclo Encerrado: Edição do Ciclo/Formulário bloqueada (Inscrições liberadas). Clique para reabrir.' : 'Clique para Encerrar a edição do Ciclo/Formulário (mantendo inscrições editáveis)' }}">
+                                <i class="text-xs ph-fill {{ $ciclo->encerrado ? 'ph-archive' : 'ph-pencil-slash' }}"></i>
+                                <span>{{ $ciclo->encerrado ? 'Encerrado' : 'Aberto' }}</span>
+                            </button>
+                        </div>
                     @else
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium uppercase {{ $ciclo->bloqueado ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-gray-100 text-gray-500' }}">
-                            {{ $ciclo->bloqueado ? 'Bloqueado' : 'Aberto' }}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium uppercase {{ $ciclo->encerrado ? 'bg-amber-50 text-amber-800 border border-amber-200' : ($ciclo->bloqueado ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-gray-100 text-gray-500') }}">
+                            {{ $ciclo->encerrado ? 'Encerrado' : ($ciclo->bloqueado ? 'Bloqueado' : 'Aberto') }}
                         </span>
                     @endif
                 </td>
@@ -527,11 +534,28 @@
                                         </div>
                                     </div>
 
-                                    <div class="flex items-center pt-3 border-t border-gray-100 dark:border-gray-700">
-                                        <input type="checkbox" wire:model="status" id="status" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
-                                        <label for="status" class="block ml-2 text-xs font-medium text-gray-900 dark:text-gray-300 cursor-pointer">
-                                            Ativar este ciclo imediatamente {{ $tipo_ciclo === 'regular' ? '(desativará outro ciclo regular ativo)' : '(projetos customizados não desativam o ciclo regular)' }}
-                                        </label>
+                                    <div class="space-y-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                        <div class="flex items-center">
+                                            <input type="checkbox" wire:model="status" id="status" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
+                                            <label for="status" class="block ml-2 text-xs font-medium text-gray-900 dark:text-gray-300 cursor-pointer">
+                                                Ativar este ciclo imediatamente {{ $tipo_ciclo === 'regular' ? '(desativará outro ciclo regular ativo)' : '(projetos customizados não desativam o ciclo regular)' }}
+                                            </label>
+                                        </div>
+
+                                        <div class="p-3.5 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div>
+                                                <span class="block text-xs font-semibold text-gray-900 dark:text-white">
+                                                    Criar acesso ao concluir o formulário
+                                                </span>
+                                                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                                    Cria e ativa automaticamente o acesso do estudante ao concluir o formulário ou a 1ª fase.
+                                                </p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                                <input type="checkbox" wire:model.live="liberar_acesso_estudante" class="sr-only peer">
+                                                <div class="w-9 h-5 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:bg-purpura-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             @endif
@@ -728,23 +752,44 @@
                                         </button>
                                     </div>
 
-                                    <div class="p-3.5 rounded-lg bg-purpura-50/50 dark:bg-purpura-900/20 border border-purpura-200 dark:border-purpura-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                        <div>
-                                            <label class="block text-xs font-bold text-purpura-900 dark:text-purpura-200">
-                                                Status da Inscrição que Habilita o Upload
-                                            </label>
-                                            <p class="text-[11px] text-gray-500 dark:text-gray-400">
-                                                O envio dos documentos será liberado quando o candidato atingir este status.
-                                            </p>
+                                    <div class="space-y-3">
+                                        <div class="p-3.5 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div>
+                                                <label class="block text-xs font-semibold text-gray-900 dark:text-white">
+                                                    Status da Inscrição que Habilita o Upload
+                                                </label>
+                                                <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                                                    O envio dos documentos será liberado quando o candidato atingir este status.
+                                                </p>
+                                            </div>
+                                            <select wire:model="status_documentacao_id" class="w-full sm:w-64 text-xs font-medium rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white py-2">
+                                                <option value="">Selecione o status...</option>
+                                                @foreach($statusDisponiveis as $stDoc)
+                                                    @if(empty($statusSelecionados) || in_array((string) $stDoc->id, $statusSelecionados, true))
+                                                        <option value="{{ $stDoc->id }}">{{ $stDoc->nome }}</option>
+                                                    @endif
+                                                @endforeach
+                                            </select>
                                         </div>
-                                        <select wire:model="status_documentacao_id" class="w-full sm:w-64 text-xs font-semibold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white py-2">
-                                            <option value="">Selecione o status...</option>
-                                            @foreach($statusDisponiveis as $stDoc)
-                                                @if(empty($statusSelecionados) || in_array((string) $stDoc->id, $statusSelecionados, true))
-                                                    <option value="{{ $stDoc->id }}">{{ $stDoc->nome }}</option>
-                                                @endif
-                                            @endforeach
-                                        </select>
+
+                                        <div class="p-3.5 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div>
+                                                <label class="block text-xs font-semibold text-gray-900 dark:text-white">
+                                                    Status da Inscrição que Cria o Acesso do Estudante
+                                                </label>
+                                                <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                                                    Ao mover a inscrição para este status, o acesso ao Portal do Estudante é criado automaticamente.
+                                                </p>
+                                            </div>
+                                            <select wire:model="status_acesso_estudante_id" class="w-full sm:w-64 text-xs font-medium rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white py-2">
+                                                <option value="">Nenhum (não criar por status)</option>
+                                                @foreach($statusDisponiveis as $stAcesso)
+                                                    @if(empty($statusSelecionados) || in_array((string) $stAcesso->id, $statusSelecionados, true))
+                                                        <option value="{{ $stAcesso->id }}">{{ $stAcesso->nome }}</option>
+                                                    @endif
+                                                @endforeach
+                                            </select>
+                                        </div>
                                     </div>
 
                                     <div class="space-y-2.5">
