@@ -457,8 +457,22 @@
                                                 </div>
 
                                             @elseif($c->tipo === 'select')
-                                                <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-xs flex items-center justify-between shadow-sm pointer-events-none">
-                                                    <span>Selecione...</span><i class="ph ph-caret-down text-gray-500"></i>
+                                                @php
+                                                    $fonteTabelaPv = !empty($cfg['usar_fonte_tabela']) ? ($cfg['fonte_tabela'] ?? '') : '';
+                                                    $labelFontePv  = $fonteTabelaPv ? (\App\Modules\FormBuilder\Services\FormBuilderService::getFontesOpcoesTabela()[$fonteTabelaPv]['label'] ?? ucfirst($fonteTabelaPv)) : null;
+                                                @endphp
+                                                <div class="space-y-1.5 pointer-events-none">
+                                                    <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-xs flex items-center justify-between shadow-sm">
+                                                        <span class="truncate">
+                                                            {{ $labelFontePv ? "Selecione ({$labelFontePv})..." : 'Selecione...' }}
+                                                        </span>
+                                                        <i class="ph ph-caret-down text-gray-500"></i>
+                                                    </div>
+                                                    @if(!empty($cfg['habilitar_outro']))
+                                                        <div class="text-[10px] text-gray-500 flex items-center gap-1">
+                                                            <i class="ph ph-plus-circle text-purpura-600"></i> Inclui opção <strong>Outro</strong> com campo de texto livre (100%)
+                                                        </div>
+                                                    @endif
                                                 </div>
 
                                             @elseif($c->tipo === 'scale')
@@ -472,13 +486,34 @@
                                                 </div>
 
                                             @elseif($c->tipo === 'radio' || $c->tipo === 'check')
-                                                <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-1.5' : 'flex-wrap gap-3' }} mt-1 pointer-events-none">
-                                                    <div class="flex items-center gap-1.5 text-gray-600 text-xs">
-                                                        <div class="w-3.5 h-3.5 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 1
+                                                @php
+                                                    $fonteTabelaPv = !empty($cfg['usar_fonte_tabela']) ? ($cfg['fonte_tabela'] ?? '') : '';
+                                                    $labelFontePv  = $fonteTabelaPv ? (\App\Modules\FormBuilder\Services\FormBuilderService::getFontesOpcoesTabela()[$fonteTabelaPv]['label'] ?? ucfirst($fonteTabelaPv)) : null;
+                                                @endphp
+                                                <div class="space-y-2 mt-1 pointer-events-none">
+                                                    @if($labelFontePv)
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 border border-gray-200 text-[10px] font-medium text-gray-600">
+                                                            <i class="ph ph-database"></i> Fonte: {{ $labelFontePv }}
+                                                        </span>
+                                                    @endif
+                                                    <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-1.5' : 'flex-wrap gap-3' }}">
+                                                        <div class="flex items-center gap-1.5 text-gray-600 text-xs">
+                                                            <div class="w-3.5 h-3.5 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 1
+                                                        </div>
+                                                        <div class="flex items-center gap-1.5 text-gray-600 text-xs">
+                                                            <div class="w-3.5 h-3.5 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 2
+                                                        </div>
+                                                        @if(!empty($cfg['habilitar_outro']))
+                                                            <div class="flex items-center gap-1.5 text-purpura-700 font-medium text-xs">
+                                                                <div class="w-3.5 h-3.5 border border-purpura-400 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Outro
+                                                            </div>
+                                                        @endif
                                                     </div>
-                                                    <div class="flex items-center gap-1.5 text-gray-600 text-xs">
-                                                        <div class="w-3.5 h-3.5 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 2
-                                                    </div>
+                                                    @if(!empty($cfg['habilitar_outro']))
+                                                        <div class="w-full px-3 py-1.5 bg-white border border-dashed border-gray-300 rounded text-[11px] text-gray-400">
+                                                            Especifique qual... (exibido ao selecionar "Outro")
+                                                        </div>
+                                                    @endif
                                                 </div>
 
                                             @elseif($c->tipo === 'system')

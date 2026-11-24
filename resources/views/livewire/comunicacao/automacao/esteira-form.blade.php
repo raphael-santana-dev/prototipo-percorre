@@ -263,6 +263,9 @@
                                     <label class="block text-[11px] font-medium text-gray-500 mb-1">Agendamento</label>
                                     <select wire:model.live="etapas.{{ $index }}.tipo_agendamento" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-xs py-1.5 px-2.5">
                                         <option value="data_fixa">Data e hora fixa</option>
+                                        @if(in_array($publico_alvo, ['inscricoes', 'formulario_publico'], true))
+                                            <option value="apos_inscricao">Após a data da inscrição</option>
+                                        @endif
                                         @if($index > 0)
                                             <option value="apos_etapa_anterior">Após Etapa #{{ $index }}</option>
                                         @endif
@@ -278,9 +281,11 @@
                                         <input type="datetime-local" wire:model="etapas.{{ $index }}.data_disparo" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-xs py-1.5 px-2.5">
                                         @error("etapas.{$index}.data_disparo") <span class="text-[11px] text-red-600 block mt-1">{{ $message }}</span> @enderror
                                     </div>
-                                @elseif(($etapa['tipo_agendamento'] ?? '') === 'apos_etapa_anterior')
+                                @elseif(in_array(($etapa['tipo_agendamento'] ?? ''), ['apos_etapa_anterior', 'apos_inscricao'], true))
                                     <div>
-                                        <label class="block text-[11px] font-medium text-gray-500 mb-1">Intervalo após a Etapa #{{ $index }}</label>
+                                        <label class="block text-[11px] font-medium text-gray-500 mb-1">
+                                            {{ ($etapa['tipo_agendamento'] ?? '') === 'apos_inscricao' ? 'Intervalo após a data da inscrição' : "Intervalo após a Etapa #{$index}" }}
+                                        </label>
                                         <div class="flex items-center gap-2">
                                             <input type="number" min="1" max="365" wire:model="etapas.{{ $index }}.atraso_valor" class="w-20 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-xs text-center py-1.5">
                                             <select wire:model="etapas.{{ $index }}.atraso_unidade" class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-xs py-1.5 px-2.5">
@@ -288,6 +293,7 @@
                                                 <option value="horas">Hora(s)</option>
                                             </select>
                                         </div>
+                                        @error("etapas.{$index}.atraso_valor") <span class="text-[11px] text-red-600 block mt-1">{{ $message }}</span> @enderror
                                     </div>
                                 @endif
 

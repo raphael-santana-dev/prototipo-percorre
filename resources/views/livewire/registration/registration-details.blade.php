@@ -916,7 +916,7 @@
                                                     wire:click="aprovarDocumentoManualmente({{ $doc->id }})"
                                                     @disabled($isLockedByOther)
                                                     class="px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
-                                                <i class="ph-bold ph-check"></i> Forçar Aprovação
+                                                <i class="ph-bold ph-check"></i> Aprovar
                                             </button>
                                         @endif
                                     </div>

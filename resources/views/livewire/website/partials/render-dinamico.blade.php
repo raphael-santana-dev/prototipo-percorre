@@ -53,15 +53,11 @@
 
         $isCondicional = !empty($gruposRegrasJs);    
     
-        $listaOpcoes = [];
-        if (!empty($campo->opcoes)) {
-            $decodificado = is_string($campo->opcoes) ? json_decode($campo->opcoes, true) : $campo->opcoes;
-            $listaOpcoes = is_array($decodificado) ? $decodificado : explode(',', $campo->opcoes);
-        }
+        $listaOpcoes = in_array($campo->tipo, ['select', 'radio', 'check'], true)
+            ? \App\Modules\FormBuilder\Services\FormBuilderService::resolverOpcoesCampo($campo)
+            : [];
 
-        if (!empty($campo->configuracoes)) {
-            $config = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : $campo->configuracoes;
-        }
+        $habilitarOutro = !empty($config['habilitar_outro']);
 
         $larguraSolicitada = (int) $campo->largura;
         if ($larguraSolicitada === 0) {
@@ -351,32 +347,92 @@
             @endif
             
             @if($campo->tipo === 'select')
-                <select wire:model.live="respostas.{{ $campo->name }}" 
-                        @if(isset($podeResponder) && !$podeResponder) disabled class="w-full rounded-md border px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed opacity-70 dark:bg-gray-800 dark:border-gray-700" @else class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700" @endif>
-                    <option value="">Selecione...</option>
-                    @foreach($listaOpcoes as $opcao)
-                        <option value="{{ trim($opcao) }}">{{ trim($opcao) }}</option>
-                    @endforeach
-                </select>
+                <div class="w-full space-y-2"
+                     @if($habilitarOutro)
+                         x-data="{
+                             get mostrarOutro() {
+                                 let v = ($wire.respostas || {})['{{ $campo->name }}'];
+                                 return String(v ?? '').trim().toLowerCase() === 'outro';
+                             }
+                         }"
+                     @endif>
+                    <select wire:model.live="respostas.{{ $campo->name }}"
+                            @if(isset($podeResponder) && !$podeResponder) disabled class="w-full rounded-md border px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed opacity-70 dark:bg-gray-800 dark:border-gray-700" @else class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700" @endif>
+                        <option value="">Selecione...</option>
+                        @foreach($listaOpcoes as $opcao)
+                            <option value="{{ trim($opcao) }}">{{ trim($opcao) }}</option>
+                        @endforeach
+                    </select>
+
+                    @if($habilitarOutro)
+                        <div x-show="mostrarOutro" x-cloak class="w-full">
+                            <input type="text"
+                                   wire:model.live.debounce.400ms="respostas.{{ $campo->name }}_outro"
+                                   placeholder="Especifique qual..."
+                                   @if(isset($podeResponder) && !$podeResponder) disabled @endif
+                                   class="w-full rounded-md border px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700">
+                        </div>
+                    @endif
+                </div>
                 
             @elseif($campo->tipo === 'radio')
-                <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-2' : 'flex-wrap gap-4' }} mt-2">
-                    @foreach($listaOpcoes as $opcao)
-                        <label class="inline-flex items-center {{ isset($config['bg_image']) ? 'text-white' : 'text-gray-700 dark:text-gray-300' }}">
-                            <input wire:model.live="respostas.{{ $campo->name }}" type="radio" value="{{ trim($opcao) }}" class="form-radio text-purpura-600 focus:ring-purpura-500 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700">
-                            <span class="ml-2 text-sm">{{ trim($opcao) }}</span>
-                        </label>
-                    @endforeach
+                <div class="w-full space-y-2 mt-2"
+                     @if($habilitarOutro)
+                         x-data="{
+                             get mostrarOutro() {
+                                 let v = ($wire.respostas || {})['{{ $campo->name }}'];
+                                 return String(v ?? '').trim().toLowerCase() === 'outro';
+                             }
+                         }"
+                     @endif>
+                    <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-2' : 'flex-wrap gap-4' }}">
+                        @foreach($listaOpcoes as $opcao)
+                            <label class="inline-flex items-center {{ isset($config['bg_image']) ? 'text-white' : 'text-gray-700 dark:text-gray-300' }}">
+                                <input wire:model.live="respostas.{{ $campo->name }}" type="radio" value="{{ trim($opcao) }}" @if(isset($podeResponder) && !$podeResponder) disabled @endif class="form-radio text-purpura-600 focus:ring-purpura-500 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700">
+                                <span class="ml-2 text-sm">{{ trim($opcao) }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+
+                    @if($habilitarOutro)
+                        <div x-show="mostrarOutro" x-cloak class="w-full pt-1">
+                            <input type="text"
+                                   wire:model.live.debounce.400ms="respostas.{{ $campo->name }}_outro"
+                                   placeholder="Especifique qual..."
+                                   @if(isset($podeResponder) && !$podeResponder) disabled @endif
+                                   class="w-full rounded-md border px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700">
+                        </div>
+                    @endif
                 </div>
 
             @elseif($campo->tipo === 'check')
-                <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-2' : 'flex-wrap gap-4' }} mt-2">
-                    @foreach($listaOpcoes as $opcao)
-                        <label class="inline-flex items-center {{ isset($config['bg_image']) ? 'text-white' : 'text-gray-700 dark:text-gray-300' }}">
-                            <input wire:model.live="respostas.{{ $campo->name }}" type="checkbox" value="{{ trim($opcao) }}" class="form-checkbox text-purpura-600 focus:ring-purpura-500 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700">
-                            <span class="ml-2 text-sm">{{ trim($opcao) }}</span>
-                        </label>
-                    @endforeach
+                <div class="w-full space-y-2 mt-2"
+                     @if($habilitarOutro)
+                         x-data="{
+                             get mostrarOutro() {
+                                 let v = ($wire.respostas || {})['{{ $campo->name }}'];
+                                 return Array.isArray(v) && v.some(i => String(i ?? '').trim().toLowerCase() === 'outro');
+                             }
+                         }"
+                     @endif>
+                    <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-2' : 'flex-wrap gap-4' }}">
+                        @foreach($listaOpcoes as $opcao)
+                            <label class="inline-flex items-center {{ isset($config['bg_image']) ? 'text-white' : 'text-gray-700 dark:text-gray-300' }}">
+                                <input wire:model.live="respostas.{{ $campo->name }}" type="checkbox" value="{{ trim($opcao) }}" @if(isset($podeResponder) && !$podeResponder) disabled @endif class="form-checkbox text-purpura-600 focus:ring-purpura-500 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700">
+                                <span class="ml-2 text-sm">{{ trim($opcao) }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+
+                    @if($habilitarOutro)
+                        <div x-show="mostrarOutro" x-cloak class="w-full pt-1">
+                            <input type="text"
+                                   wire:model.live.debounce.400ms="respostas.{{ $campo->name }}_outro"
+                                   placeholder="Especifique qual..."
+                                   @if(isset($podeResponder) && !$podeResponder) disabled @endif
+                                   class="w-full rounded-md border px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700">
+                        </div>
+                    @endif
                 </div>
 
             @elseif($campo->tipo === 'matriz')

@@ -736,4 +736,93 @@ class FormBuilderService
             'campos_usados'    => $camposUsados,
         ];
     }
+
+    /**
+     * Registro centralizado e extensível de tabelas disponíveis como fonte de opções
+     * para campos de escolha (select, radio, check).
+     * Para adicionar novas tabelas no futuro, basta incluir uma nova entrada neste array.
+     */
+    public static function getFontesOpcoesTabela(): array
+    {
+        return [
+            'escolas' => [
+                'label'        => 'Escolas Cadastradas',
+                'model'        => \App\Modules\Escola\Domain\Models\Escola::class,
+                'value_column' => 'nome',
+                'order_by'     => 'nome',
+                'status_col'   => 'status',
+            ],
+        ];
+    }
+
+    /**
+     * Busca os registros ativos da tabela configurada e retorna a lista de nomes.
+     */
+    public static function resolverOpcoesTabela(string $fonte): array
+    {
+        $fontes = self::getFontesOpcoesTabela();
+        $cfg = $fontes[$fonte] ?? null;
+
+        if (!$cfg || empty($cfg['model']) || !class_exists($cfg['model'])) {
+            return [];
+        }
+
+        $modelClass  = $cfg['model'];
+        $valueColumn = $cfg['value_column'] ?? 'nome';
+        $orderBy     = $cfg['order_by'] ?? $valueColumn;
+        $statusCol   = $cfg['status_col'] ?? null;
+
+        $query = $modelClass::query();
+
+        if ($statusCol) {
+            $query->where($statusCol, true);
+        }
+
+        return $query->orderBy($orderBy)
+            ->pluck($valueColumn)
+            ->map(fn($v) => trim((string) $v))
+            ->filter(fn($v) => $v !== '')
+            ->unique()
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * Resolve a lista final de opções de um campo (manual ou tabela do BD)
+     * e acrescenta automaticamente "Outro" caso a opção esteja habilitada.
+     */
+    public static function resolverOpcoesCampo($campo): array
+    {
+        $config = is_string($campo->configuracoes)
+            ? (json_decode($campo->configuracoes, true) ?: [])
+            : (is_array($campo->configuracoes) ? $campo->configuracoes : []);
+
+        $opcoesRaw = is_string($campo->opcoes)
+            ? json_decode($campo->opcoes, true)
+            : $campo->opcoes;
+
+        $usarFonteTabela = !empty($config['usar_fonte_tabela']) || (is_array($opcoesRaw) && !empty($opcoesRaw['origem_bd']));
+        $fonteTabela     = $config['fonte_tabela'] ?? (is_array($opcoesRaw) ? ($opcoesRaw['origem_bd'] ?? '') : '');
+
+        if ($usarFonteTabela && $fonteTabela !== '') {
+            $lista = self::resolverOpcoesTabela((string) $fonteTabela);
+        } else {
+            if (is_array($opcoesRaw)) {
+                $lista = array_values(array_filter(array_map(fn($v) => trim((string) $v), $opcoesRaw), fn($v) => $v !== ''));
+            } elseif (is_string($campo->opcoes) && trim($campo->opcoes) !== '') {
+                $lista = array_values(array_filter(array_map('trim', explode(',', $campo->opcoes)), fn($v) => $v !== ''));
+            } else {
+                $lista = [];
+            }
+        }
+
+        if (!empty($config['habilitar_outro'])) {
+            $jaPossuiOutro = collect($lista)->contains(fn($item) => mb_strtolower(trim($item), 'UTF-8') === 'outro');
+            if (!$jaPossuiOutro) {
+                $lista[] = 'Outro';
+            }
+        }
+
+        return $lista;
+    }
 }

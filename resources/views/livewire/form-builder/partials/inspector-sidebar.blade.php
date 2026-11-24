@@ -376,13 +376,43 @@
                 @endif
 
                 @if(in_array($tipo, ['select', 'radio', 'check']))
-                    <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-2.5">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Opções de Resposta (1 por linha)</label>
-                            <textarea wire:model="opcoes" rows="4" placeholder="Sim&#10;Não" class="w-full text-xs"></textarea>
-                        </div>
-                        @if(in_array($tipo, ['radio', 'check']))
+                    <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+                        <label class="flex items-start gap-2 cursor-pointer">
+                            <input type="checkbox" wire:model.live="configuracoes.usar_fonte_tabela" class="mt-0.5">
+                            <div class="text-xs">
+                                <span class="font-semibold text-gray-900 block">Usar tabela do sistema como fonte</span>
+                                <span class="text-[11px] text-gray-500">Preenche as opções automaticamente a partir de um cadastro do banco.</span>
+                            </div>
+                        </label>
+
+                        @if(!empty($configuracoes['usar_fonte_tabela']))
                             <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Fonte de Dados (Tabela) <span class="text-red-500">*</span></label>
+                                <select wire:model.live="configuracoes.fonte_tabela" class="w-full text-xs">
+                                    <option value="">Selecione a tabela...</option>
+                                    @foreach($this->fontesOpcoesTabela as $chaveFonte => $metaFonte)
+                                        <option value="{{ $chaveFonte }}">{{ $metaFonte['label'] }}</option>
+                                    @endforeach
+                                </select>
+                                @error('configuracoes.fonte_tabela') <span class="text-[11px] text-red-600 mt-1 block">{{ $message }}</span> @enderror
+                            </div>
+                        @else
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Opções de Resposta (1 por linha)</label>
+                                <textarea wire:model="opcoes" rows="4" placeholder="Sim&#10;Não" class="w-full text-xs"></textarea>
+                            </div>
+                        @endif
+
+                        <label class="flex items-start gap-2 pt-2 border-t border-gray-200 cursor-pointer">
+                            <input type="checkbox" wire:model.live="configuracoes.habilitar_outro" class="mt-0.5">
+                            <div class="text-xs">
+                                <span class="font-semibold text-gray-900 block">Habilitar opção "Outro"</span>
+                                <span class="text-[11px] text-gray-500">Insere automaticamente a opção "Outro" e exibe um campo de texto livre ao selecioná-la.</span>
+                            </div>
+                        </label>
+
+                        @if(in_array($tipo, ['radio', 'check']))
+                            <div class="pt-2 border-t border-gray-200">
                                 <label class="block text-xs font-medium text-gray-700 mb-1">Alinhamento</label>
                                 <select wire:model.live="configuracoes.layout_opcoes" class="w-full text-xs">
                                     <option value="horizontal">Horizontal (Lado a Lado)</option>
