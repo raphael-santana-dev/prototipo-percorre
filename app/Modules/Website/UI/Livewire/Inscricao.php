@@ -1166,6 +1166,15 @@ class Inscricao extends Component
             $proximaEtapa = min($this->totalEtapas, $this->etapaAtual + 1);
             InscricaoModel::where('id', $this->inscricaoId)->update(['etapa_atual' => $proximaEtapa]);
             $this->resumeToken = $this->gerarResumeTokenSeguro($this->inscricaoId);
+
+            $inscricaoFase = InscricaoModel::with('ciclo')->find($this->inscricaoId);
+            if ($inscricaoFase && (bool) ($inscricaoFase->ciclo?->liberar_acesso_estudante ?? false)) {
+                \App\Modules\Student\Services\StudentAccessService::garantirAcesso(
+                    $inscricaoFase,
+                    marcarMatriculado: false,
+                    dispararNotificacao: true
+                );
+            }
         }
 
         $this->faseAtualConcluidaAguardando = true;

@@ -203,7 +203,10 @@ class ProcessoMatriculaManager extends Component
     public function render()
     {
         $queryDossies = Inscricao::with(['curso', 'ciclo', 'unidade'])
-            ->whereNotNull('token_matricula')
+            ->where(function ($q) {
+                $q->whereNotNull('token_matricula')
+                  ->orWhereIn('inscricoes.id', DocumentoMatricula::select('inscricao_id'));
+            })
             ->apenasVinculosPermitidos();
 
         if (!empty($this->filtroBusca)) {

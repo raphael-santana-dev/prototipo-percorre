@@ -1,4 +1,4 @@
-<div class="w-full relative">
+<div class="w-full relative" x-data="{ abaAtiva: @entangle('abaAtiva') }">
     
     <x-page-header 
         title="Acompanhamento de Matrículas" 
@@ -173,8 +173,8 @@
                         <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5 block">Envio: {{ $doc->updated_at->format('d/m/y H:i') }}</span>
                     </td>
                     <td class="px-4 py-2.5 text-center whitespace-nowrap">
-                        <span class="px-2 py-0.5 rounded-full bg-red-50 text-red-700 font-bold border border-red-200 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider">
-                            <i class="ph-bold ph-robot"></i> {{ $doc->tentativas_ia }} Falhas
+                        <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 font-bold border border-amber-200 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider">
+                            <i class="ph-bold ph-robot"></i> Análise Manual
                         </span>
                     </td>
                     <td class="px-4 py-2.5 text-right whitespace-nowrap">

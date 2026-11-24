@@ -589,9 +589,9 @@ class RegistrationManager extends Component
                 $docMatricula->status_analise = 'valido_ia';
                 $docMatricula->log_ia = array_merge($resultadoIa['raw'] ?? [], $metaParticipante);
             } else {
-                $docMatricula->status_analise = ($docMatricula->tentativas_ia >= 3) ? 'analise_manual' : 'invalido_ia';
+                $docMatricula->status_analise = 'analise_manual';
                 $docMatricula->log_ia = array_merge([
-                    'motivo_rejeicao' => $resultadoIa['motivo_rejeicao'] ?? 'Rejeitado na validação por IA.',
+                    'motivo_rejeicao' => $resultadoIa['motivo_rejeicao'] ?? 'Recusado pela IA e encaminhado para análise manual.',
                     'raw'             => $resultadoIa['raw'] ?? [],
                 ], $metaParticipante);
             }

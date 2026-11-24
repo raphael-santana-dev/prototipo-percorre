@@ -871,7 +871,7 @@
                                             </span>
                                         @elseif($statusDoc === 'analise_manual')
                                             <span class="px-2.5 py-1 text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200 rounded-lg flex items-center gap-1">
-                                                <i class="ph-bold ph-clock"></i> Em Análise
+                                                <i class="ph-bold ph-clock"></i> Análise Manual
                                             </span>
                                         @else
                                             <span class="px-2.5 py-1 text-[10px] font-bold uppercase bg-gray-100 text-gray-600 rounded-lg">
