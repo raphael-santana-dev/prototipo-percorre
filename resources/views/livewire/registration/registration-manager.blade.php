@@ -1528,21 +1528,13 @@
                         </button>
                     </div>
 
-                    {{-- Barra de controles (Matrícula + Validação IA) --}}
-                    <div class="px-5 py-3 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-                        <div class="flex items-center gap-2.5">
-                            <x-toggle :status="$docModalMatriculado" action="toggleMatriculaInscricao({{ $docModalInscricaoId }})" />
-                            <div class="text-xs leading-tight">
-                                <span class="font-semibold text-gray-900 dark:text-white block">
-                                    {{ $docModalMatriculado ? 'Candidato Matriculado' : 'Efetivar Matrícula' }}
-                                </span>
-                                <span class="text-[11px] text-gray-500 dark:text-gray-400">
-                                    {{ $docModalMatriculado ? 'Acesso ao Portal do Estudante ativo' : 'Ao ativar, cria o acesso do estudante' }}
-                                </span>
-                            </div>
-                        </div>
+                    {{-- Barra de controle de validação por IA --}}
+                    <div class="px-5 py-3 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
+                        <span class="text-xs text-gray-500 dark:text-gray-400">
+                            Envie ou valide os documentos exigidos para este candidato.
+                        </span>
 
-                        <label class="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                        <label class="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none shrink-0">
                             <input type="checkbox" wire:model.live="docModalValidarComIa" class="w-4 h-4 rounded border-gray-300 text-purpura-600 focus:ring-purpura-500">
                             <span class="font-medium">{{ $docModalValidarComIa ? 'Validar com IA' : 'Aprovação direta (sem IA)' }}</span>
                         </label>
