@@ -4,6 +4,10 @@
      x-effect="document.body.classList.toggle('overflow-hidden', emailModal || @entangle('urlEmbedAtiva') || @entangle('modalHistoricoFormularioAberto') || @entangle('modalTrocaVinculoAberto'))">
 
     @php
+        $u = auth()->user();
+        $isDev = $u?->hasRole('dev') ?? false;
+        $pode = fn(string $chave) => feature($chave) && ($isDev || ($u && $u->can($chave)));
+
         $dinamicos = is_string($inscricao->dados_dinamicos) ? json_decode($inscricao->dados_dinamicos, true) : ($inscricao->dados_dinamicos ?? []);
         if (!is_array($dinamicos)) $dinamicos = [];
         $mapaParticipante = $dinamicos['_preenchido_por_participante'] ?? [];
@@ -69,14 +73,16 @@
                     {{ \App\Models\StatusInscricao::find($inscricao->status_inscricao_id)->nome ?? 'Sem Status' }}
                 </span>
 
-                <button type="button"
-                        wire:click="baixarFichaInscricaoPdf({{ $inscricao->id }})"
-                        wire:loading.attr="disabled"
-                        class="btn btn--secondary btn--small !h-[30px] !px-3 !text-[11px] bg-white border border-gray-200 text-purpura-700 hover:bg-purpura-50 flex items-center gap-1.5 shadow-2xs">
-                    <i class="ph-bold ph-file-pdf text-sm text-purpura-600"></i> Ficha de Inscrição (PDF)
-                </button>
+                @if($pode('inscricao.inscritos.baixar_fichar'))
+                    <button type="button"
+                            wire:click="baixarFichaInscricaoPdf({{ $inscricao->id }})"
+                            wire:loading.attr="disabled"
+                            class="btn btn--secondary btn--small !h-[30px] !px-3 !text-[11px] bg-white border border-gray-200 text-purpura-700 hover:bg-purpura-50 flex items-center gap-1.5 shadow-2xs">
+                        <i class="ph-bold ph-file-pdf text-sm text-purpura-600"></i> Ficha de Inscrição (PDF)
+                    </button>
+                @endif
 
-                @if($podeEditarAssistido)
+                @if(!$inscricao->legado && $pode('inscricao.inscritos.status'))
                     <div class="flex items-center gap-1.5 bg-gray-50 p-1 rounded-lg border border-gray-200 {{ $isLockedByOther ? 'opacity-60' : '' }}"
                          @if($isLockedByOther) title="Desabilitado: inscrição em edição por {{ $lockOwnerName }}" @endif>
                         <select wire:model="status_selecionado" @disabled($isLockedByOther) class="border-none bg-transparent rounded-md text-[11px] font-bold text-gray-700 focus:ring-0 py-1 pl-2 pr-6 {{ $isLockedByOther ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-gray-100' }} transition-colors shadow-none">
@@ -144,9 +150,11 @@
             <i class="ph-bold ph-clock-counter-clockwise"></i> Movimentação
         </button>
 
-        <button wire:click="setAba('comunicacao')" class="pb-3 text-sm font-bold transition-colors border-b-2 whitespace-nowrap flex items-center gap-1.5 {{ $abaAtiva === 'comunicacao' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' }}">
-            <i class="ph-bold ph-envelope-simple"></i> Comunicação
-        </button>
+        @if($pode('inscricao.inscritos.visualizar_comunicados'))
+            <button wire:click="setAba('comunicacao')" class="pb-3 text-sm font-bold transition-colors border-b-2 whitespace-nowrap flex items-center gap-1.5 {{ $abaAtiva === 'comunicacao' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' }}">
+                <i class="ph-bold ph-envelope-simple"></i> Comunicação
+            </button>
+        @endif
     </div>
 
     {{-- ===================================================================== --}}
@@ -541,7 +549,7 @@
                                                             <span class="px-1.5 py-0.5 text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded">Enviado por Participante</span>
                                                         @endif
                                                     </h4>
-                                                    @if(!empty($laudoPcdPath))
+                                                    @if(!empty($laudoPcdPath) && $pode('inscricao.inscritos.visualizar_laudo'))
                                                         <p class="text-xs text-gray-600 dark:text-gray-300 mt-0.5 font-mono">
                                                             {{ basename($laudoPcdPath) }}
                                                         </p>
@@ -553,7 +561,7 @@
                                                 </div>
                                             </div>
 
-                                            @if(!empty($laudoPcdPath))
+                                            @if(!empty($laudoPcdPath) && $pode('inscricao.inscritos.visualizar_laudo'))
                                                 @php
                                                     $urlLaudoCompleta = asset('storage/' . $laudoPcdPath);
                                                     $nomeArquivoLaudo = basename($laudoPcdPath);
@@ -750,11 +758,13 @@
                                         </div>
                                     @endforeach
                                 </div>
-                                <div class="mt-3 text-right">
-                                    <button wire:click="abrirRegras" class="btn btn--secondary btn--small w-full">
-                                        <i class="ph-bold ph-list-numbers text-sm"></i> Ver mapa completo
-                                    </button>
-                                </div>
+                                @if($pode('inscricao.inscritos.visualizar'))
+                                    <div class="mt-3 text-right">
+                                        <button wire:click="abrirRegras" class="btn btn--secondary btn--small w-full">
+                                            <i class="ph-bold ph-list-numbers text-sm"></i> Ver mapa completo
+                                        </button>
+                                    </div>
+                                @endif
                             @endif
                         @else
                             <div class="py-10 text-center">
@@ -816,7 +826,7 @@
                     </div>
 
                     {{-- INTERRUPTOR: ATIVAR / DESATIVAR VALIDAÇÃO POR IA --}}
-                    @if($this->uploadDocumentacaoHabilitado)
+                    @if($this->uploadDocumentacaoHabilitado && !$inscricao->legado && $pode('inscricao.inscritos.enviar_docs'))
                         <label class="flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition shrink-0 {{ $validarComIa ? 'bg-purpura-50 border-purpura-300 text-purpura-900' : 'bg-amber-50 border-amber-300 text-amber-900' }}">
                             <input type="checkbox" wire:model.live="validarComIa" class="w-4 h-4 rounded text-purpura-600 focus:ring-purpura-500 border-gray-300">
                             <div class="text-xs">
@@ -911,7 +921,7 @@
                                             </a>
                                         @endif
 
-                                        @if(!empty($infoDoc['id']) && !in_array($statusDoc, ['valido_ia', 'aprovado_manual']))
+                                        @if(!empty($infoDoc['id']) && !in_array($statusDoc, ['valido_ia', 'aprovado_manual']) && $pode('inscricao.inscritos.validar_docs'))
                                             <button type="button"
                                                     wire:click="aprovarDocumentoManualmente({{ $doc->id }})"
                                                     @disabled($isLockedByOther)
@@ -925,7 +935,7 @@
                                         <button type="button" disabled class="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500 text-xs font-semibold inline-flex items-center gap-1.5 cursor-not-allowed" title="Em edição por {{ $lockOwnerName }}">
                                             <i class="ph-fill ph-lock-key"></i> Upload bloqueado (Em edição)
                                         </button>
-                                    @elseif($podeEditarAssistido && $this->uploadDocumentacaoHabilitado)
+                                    @elseif(!$inscricao->legado && $pode('inscricao.inscritos.enviar_docs') && $this->uploadDocumentacaoHabilitado)
                                         <label class="px-3.5 py-2 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-lg cursor-pointer transition inline-flex items-center gap-1.5">
                                             <i class="ph-bold ph-upload-simple"></i>
                                             <span wire:loading.remove wire:target="uploads.{{ $doc->id }}">
@@ -1018,14 +1028,16 @@
                                                 <i class="ph-bold ph-clock-counter-clockwise"></i> Histórico
                                             </button>
                                         @endif
-                                        <button type="button"
-                                                wire:click="abrirFormularioEmbedTable('{{ $form['ref'] }}', '{{ $form['id'] }}')"
-                                                @disabled($isLockedByOther)
-                                                @if($isLockedByOther) title="Em edição por {{ $lockOwnerName }}" @endif
-                                                class="px-3.5 py-1.5 text-[11px] font-bold rounded-lg transition inline-flex items-center gap-1.5 {{ $isLockedByOther ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'text-white bg-purpura-600 hover:bg-purpura-700' }}">
-                                            <i class="ph-bold {{ $isLockedByOther ? 'ph-lock-key' : 'ph-play' }}"></i>
-                                            {{ $isLockedByOther ? 'Em edição' : 'Iniciar Preenchimento' }}
-                                        </button>
+                                        @if($podeEditarAssistido)
+                                            <button type="button"
+                                                    wire:click="abrirFormularioEmbedTable('{{ $form['ref'] }}', '{{ $form['id'] }}')"
+                                                    @disabled($isLockedByOther)
+                                                    @if($isLockedByOther) title="Em edição por {{ $lockOwnerName }}" @endif
+                                                    class="px-3.5 py-1.5 text-[11px] font-bold rounded-lg transition inline-flex items-center gap-1.5 {{ $isLockedByOther ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'text-white bg-purpura-600 hover:bg-purpura-700' }}">
+                                                <i class="ph-bold {{ $isLockedByOther ? 'ph-lock-key' : 'ph-play' }}"></i>
+                                                {{ $isLockedByOther ? 'Em edição' : 'Iniciar Preenchimento' }}
+                                            </button>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -1086,7 +1098,7 @@
     {{-- ===================================================================== --}}
     {{-- ABA 5: COMUNICAÇÃO                                                    --}}
     {{-- ===================================================================== --}}
-    @elseif($abaAtiva === 'comunicacao')
+    @elseif($abaAtiva === 'comunicacao' && $pode('inscricao.inscritos.visualizar_comunicados'))
         <div class="mt-6 space-y-6 animate-fade-in-down w-full block">
             <div class="card !p-0 overflow-hidden w-full block">
                 <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">

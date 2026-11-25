@@ -1,3 +1,9 @@
+@php
+    $u = auth()->user();
+    $isDev = $u?->hasRole('dev') ?? false;
+    $pode = fn(string $chave) => feature($chave) && ($isDev || ($u && $u->can($chave)));
+@endphp
+
 <div class="w-full relative" 
      x-data="{ loteAberto: $wire.entangle('modalLoteAberto'), selecaoAberto: $wire.entangle('modalSelecaoAvancadaAberto'), antiSpamAberto: $wire.entangle('modalAntiSpamAberto'), moverCicloAberto: $wire.entangle('modalMoverCicloAberto') }" 
      x-effect="document.body.classList.toggle('overflow-hidden', loteAberto || selecaoAberto || antiSpamAberto || moverCicloAberto)"> 
@@ -11,6 +17,7 @@
         <x-slot name="actions">
             
             {{-- BOTÃO E MODAL: INCORPORAR INSCRIÇÃO --}}
+            @if($pode('inscricao.ciclo.incorporar'))
             <div x-data="{ showEmbedInscricao: false }" class="relative inline-block text-left">
                 <button @click="showEmbedInscricao = true" class="btn btn--secondary btn--medium bg-white dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700">
                     <i class="ph-bold ph-code text-purpura-600"></i> Incorporar / Link
@@ -56,7 +63,7 @@
                         </div>
                         
                         <div class="mt-6 flex justify-between items-center border-t border-gray-100 dark:border-gray-700 pt-5">
-                            @if(auth()->user()->hasAnyRole(['dev', 'admin']) || auth()->user()->can('formulario.testar') || auth()->user()->can('inscricao.criar'))
+                            @if($pode('inscricao.ciclo.visualizar') || $pode('inscricao.inscritos.criar'))
                                 <a href="{{ $urlInscricaoModal }}?modo=teste" target="_blank" class="text-xs font-bold text-amber-700 hover:text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors">
                                     <i class="ph-fill ph-flask"></i> Testar (Sandbox) <i class="ph-bold ph-arrow-up-right"></i>
                                 </a>
@@ -70,27 +77,30 @@
                     </div>
                 </div>
             </div>
+            @endif
             
-            <div x-data="{ openExport: false }" class="relative inline-block text-left">
-                <button @click="openExport = !openExport" @click.away="openExport = false" class="btn btn--secondary btn--medium bg-white">
-                    <i class="ph-bold ph-export text-purpura-600"></i>
-                    <span>Exportar {{ count($selecionadas) > 0 ? '(' . count($selecionadas) . ')' : '' }}</span>
-                </button>
-                <div x-show="openExport" x-cloak class="absolute right-0 w-56 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-lg shadow-xl z-50 dark:bg-gray-800 dark:border-gray-700">
-                    <div class="py-1">
-                        <button wire:click="solicitarExportacao('csv')" @click="openExport = false" class="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 font-bold text-left gap-2 dark:text-gray-300 dark:hover:bg-gray-700">
-                            <i class="ph-fill ph-file-csv text-lg text-purpura-500"></i>
-                            <span>CSV (.csv) — {{ count($selecionadas) > 0 ? count($selecionadas) . ' Selecionadas' : 'Todas Filtradas' }}</span>
-                        </button>
-                        <button wire:click="solicitarExportacao('xlsx')" @click="openExport = false" class="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 font-bold text-left gap-2 dark:text-gray-300 dark:hover:bg-gray-700">
-                            <i class="ph-fill ph-file-xls text-lg text-emerald-500"></i>
-                            <span>Excel (.xlsx) — {{ count($selecionadas) > 0 ? count($selecionadas) . ' Selecionadas' : 'Todas Filtradas' }}</span>
-                        </button>
+            @if($pode('inscricao.inscritos.exportar'))
+                <div x-data="{ openExport: false }" class="relative inline-block text-left">
+                    <button @click="openExport = !openExport" @click.away="openExport = false" class="btn btn--secondary btn--medium bg-white">
+                        <i class="ph-bold ph-export text-purpura-600"></i>
+                        <span>Exportar {{ count($selecionadas) > 0 ? '(' . count($selecionadas) . ')' : '' }}</span>
+                    </button>
+                    <div x-show="openExport" x-cloak class="absolute right-0 w-56 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-lg shadow-xl z-50 dark:bg-gray-800 dark:border-gray-700">
+                        <div class="py-1">
+                            <button wire:click="solicitarExportacao('csv')" @click="openExport = false" class="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 font-bold text-left gap-2 dark:text-gray-300 dark:hover:bg-gray-700">
+                                <i class="ph-fill ph-file-csv text-lg text-purpura-500"></i>
+                                <span>CSV (.csv) — {{ count($selecionadas) > 0 ? count($selecionadas) . ' Selecionadas' : 'Todas Filtradas' }}</span>
+                            </button>
+                            <button wire:click="solicitarExportacao('xlsx')" @click="openExport = false" class="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 font-bold text-left gap-2 dark:text-gray-300 dark:hover:bg-gray-700">
+                                <i class="ph-fill ph-file-xls text-lg text-emerald-500"></i>
+                                <span>Excel (.xlsx) — {{ count($selecionadas) > 0 ? count($selecionadas) . ' Selecionadas' : 'Todas Filtradas' }}</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            @endif
 
-            @if(feature('inscricao.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.criar')))
+            @if($pode('inscricao.inscritos.criar'))
                 <button wire:click="abrirModal" class="btn btn--primary btn--medium bg-blue-600 hover:bg-blue-700 border-none shadow-none">
                     Novo Registo
                 </button>
@@ -165,7 +175,7 @@
                         </div>
 
                         {{-- LINHA 2: Área de Ações em Lote e Quick Select --}}
-                        @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+                        @if($pode('inscricao.inscritos.selecionar'))
                             <div class="flex flex-wrap items-center gap-3 text-sm mt-1">
                                 <label class="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer mr-2">
                                     <input type="checkbox" wire:model.live="selecionarTudo" class="rounded border-gray-300 text-purpura-600 focus:ring-purpura-500">
@@ -187,73 +197,87 @@
                                 </div>
 
                                 <div class="flex flex-wrap items-center gap-1.5">
-                                    <button type="button" wire:click="solicitarExportacao('xlsx')" class="btn btn--ondark btn--small !bg-emerald-600 hover:!bg-emerald-700 border-none" title="Exportar Selecionadas para Excel">
-                                        <i class="ph-bold ph-file-xls"></i> Excel
-                                    </button>
-                                    <button type="button" wire:click="solicitarExportacao('csv')" class="btn btn--ondark btn--small !bg-blue-600 hover:!bg-blue-700 border-none" title="Exportar Selecionadas para CSV">
-                                        <i class="ph-bold ph-file-csv"></i> CSV
-                                    </button>
+                                    @if($pode('inscricao.inscritos.exportar'))
+                                        <button type="button" wire:click="solicitarExportacao('xlsx')" class="btn btn--ondark btn--small !bg-emerald-600 hover:!bg-emerald-700 border-none" title="Exportar Selecionadas para Excel">
+                                            <i class="ph-bold ph-file-xls"></i> Excel
+                                        </button>
+                                        <button type="button" wire:click="solicitarExportacao('csv')" class="btn btn--ondark btn--small !bg-blue-600 hover:!bg-blue-700 border-none" title="Exportar Selecionadas para CSV">
+                                            <i class="ph-bold ph-file-csv"></i> CSV
+                                        </button>
+                                        <div class="h-5 w-px bg-gray-700 mx-1"></div>
+                                    @endif
 
-                                    <div class="h-5 w-px bg-gray-700 mx-1"></div>
+                                    @if($pode('inscricao.inscritos.legado'))
+                                        <button type="button"
+                                                wire:click="definirLegadoEmLote(true)"
+                                                wire:confirm="Marcar as inscrições selecionadas como Legado (somente visualização)?"
+                                                class="btn btn--ondark btn--small !bg-amber-600 hover:!bg-amber-700 border-none"
+                                                title="Definir selecionadas como Legado (Somente Leitura)">
+                                            <i class="ph-fill ph-archive"></i> Marcar Legado
+                                        </button>
 
-                                    <button type="button"
-                                            wire:click="definirLegadoEmLote(true)"
-                                            wire:confirm="Marcar as inscrições selecionadas como Legado (somente visualização)?"
-                                            class="btn btn--ondark btn--small !bg-amber-600 hover:!bg-amber-700 border-none"
-                                            title="Definir selecionadas como Legado (Somente Leitura)">
-                                        <i class="ph-fill ph-archive"></i> Marcar Legado
-                                    </button>
+                                        <button type="button"
+                                                wire:click="definirLegadoEmLote(false)"
+                                                wire:confirm="Remover a trava de Legado das inscrições selecionadas?"
+                                                class="btn btn--ondark btn--small border-gray-600 hover:bg-gray-700"
+                                                title="Desmarcar Legado e liberar edição">
+                                            <i class="ph-bold ph-lock-key-open"></i> Remover Legado
+                                        </button>
+                                        <div class="h-5 w-px bg-gray-700 mx-1"></div>
+                                    @endif
 
-                                    <button type="button"
-                                            wire:click="definirLegadoEmLote(false)"
-                                            wire:confirm="Remover a trava de Legado das inscrições selecionadas?"
-                                            class="btn btn--ondark btn--small border-gray-600 hover:bg-gray-700"
-                                            title="Desmarcar Legado e liberar edição">
-                                        <i class="ph-bold ph-lock-key-open"></i> Remover Legado
-                                    </button>
-
-                                    <div class="h-5 w-px bg-gray-700 mx-1"></div>
-
-                                    <button type="button"
-                                            wire:click="criarAcessosEmLote"
-                                            wire:confirm="Criar/ativar o acesso ao Portal do Estudante para as inscrições selecionadas?"
-                                            class="btn btn--ondark btn--small !bg-purpura-600 hover:!bg-purpura-700 border-none"
-                                            title="Criar acesso ao Portal do Estudante em lote">
-                                        <i class="ph-bold ph-user-plus"></i> Criar Acessos
-                                    </button>
+                                    @if($pode('inscricao.inscritos.criar_acesso'))
+                                        <button type="button"
+                                                wire:click="criarAcessosEmLote"
+                                                wire:confirm="Criar/ativar o acesso ao Portal do Estudante para as inscrições selecionadas?"
+                                                class="btn btn--ondark btn--small !bg-purpura-600 hover:!bg-purpura-700 border-none"
+                                                title="Criar acesso ao Portal do Estudante em lote">
+                                            <i class="ph-bold ph-user-plus"></i> Criar Acessos
+                                        </button>
+                                    @endif
                                 </div>
                                 
                                 @if($cicloBloqueado)
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-xs text-amber-300 font-bold flex items-center gap-1 mr-2">
-                                            <i class="ph-bold ph-lock-key"></i> Ciclo Bloqueado
-                                        </span>
-                                        <button wire:click="abrirModalSolicitacao" class="btn btn--primary btn--small bg-amber-600 hover:bg-amber-700 border-none shadow-sm flex items-center gap-1.5">
-                                            <i class="ph-bold ph-paper-plane-tilt"></i> Solicitar Alteração
-                                        </button>
-                                    </div>
+                                    @if($pode('inscricao.inscritos.status'))
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs text-amber-300 font-bold flex items-center gap-1 mr-2">
+                                                <i class="ph-bold ph-lock-key"></i> Ciclo Bloqueado
+                                            </span>
+                                            <button wire:click="abrirModalSolicitacao" class="btn btn--primary btn--small bg-amber-600 hover:bg-amber-700 border-none shadow-sm flex items-center gap-1.5">
+                                                <i class="ph-bold ph-paper-plane-tilt"></i> Solicitar Alteração
+                                            </button>
+                                        </div>
+                                    @endif
                                 @else
-                                    <div class="flex items-center gap-2 w-full sm:w-auto">
-                                        <select wire:model="novoStatusId" class="w-full sm:w-auto h-9 !py-0 text-sm border-transparent bg-gray-800 text-white focus:ring-1 focus:ring-white rounded-lg">
-                                            <option value="">Alterar status para...</option>
-                                            @foreach($statusInscricoesDb as $id => $nome)
-                                                <option value="{{ $id }}">{{ $nome }}</option>
-                                            @endforeach
-                                        </select>
-                                        <button wire:click="salvarStatusEmLote" class="btn btn--primary btn--small bg-blue-600 hover:bg-blue-700 border-none">Aplicar</button>
-                                    </div>
+                                    @if($pode('inscricao.inscritos.status'))
+                                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                                            <select wire:model="novoStatusId" class="w-full sm:w-auto h-9 !py-0 text-sm border-transparent bg-gray-800 text-white focus:ring-1 focus:ring-white rounded-lg">
+                                                <option value="">Alterar status para...</option>
+                                                @foreach($statusInscricoesDb as $id => $nome)
+                                                    <option value="{{ $id }}">{{ $nome }}</option>
+                                                @endforeach
+                                            </select>
+                                            <button wire:click="salvarStatusEmLote" class="btn btn--primary btn--small bg-blue-600 hover:bg-blue-700 border-none">Aplicar</button>
+                                        </div>
+                                    @endif
                                     
-                                    <button wire:click="avancarSelecionadas" class="btn btn--ondark btn--small">
-                                        Avançar Etapa <i class="ph-bold ph-arrow-right"></i>
-                                    </button>
+                                    @if($pode('inscricao.inscritos.avancar'))
+                                        <button wire:click="avancarSelecionadas" class="btn btn--ondark btn--small">
+                                            Avançar Etapa <i class="ph-bold ph-arrow-right"></i>
+                                        </button>
+                                    @endif
 
-                                    <button wire:click="abrirModalMoverCiclo" class="btn btn--ondark btn--small border-transparent hover:bg-gray-800 px-3" title="Mover para outro Ciclo">
-                                        Alterar ciclo <i class="ph-bold ph-calendar text-lg"></i>
-                                    </button>
+                                    @if($pode('inscricao.inscritos.editar'))
+                                        <button wire:click="abrirModalMoverCiclo" class="btn btn--ondark btn--small border-transparent hover:bg-gray-800 px-3" title="Mover para outro Ciclo">
+                                            Alterar ciclo <i class="ph-bold ph-calendar text-lg"></i>
+                                        </button>
+                                    @endif
                                     
-                                    <button wire:click="abrirModalLote" class="btn btn--ondark btn--small border-transparent hover:bg-gray-800 px-3" title="Visualizar Lote">
-                                        <i class="ph-bold ph-list-dashes text-lg"></i>
-                                    </button>
+                                    @if($pode('inscricao.inscritos.status'))
+                                        <button wire:click="abrirModalLote" class="btn btn--ondark btn--small border-transparent hover:bg-gray-800 px-3" title="Visualizar Lote">
+                                            <i class="ph-bold ph-list-dashes text-lg"></i>
+                                        </button>
+                                    @endif
                                 @endif
                             </div>
                             @endif
@@ -266,7 +290,9 @@
                     <tr wire:key="linha-inscricao-{{ $inscricao->id }}" class="bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800/50 transition-colors">
                         
                         <td class="px-4 py-1.5 text-center whitespace-nowrap w-12">
-                            <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-lista-{{ $inscricao->id }}">
+                            @if($pode('inscricao.inscritos.selecionar'))
+                                <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-lista-{{ $inscricao->id }}">
+                            @endif
                         </td>
                         
                         <td class="px-4 py-1.5 whitespace-nowrap min-w-[200px]">
@@ -285,7 +311,7 @@
                         </td>
 
                         <td class="px-4 py-1.5 text-center whitespace-nowrap">
-                            @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+                            @if($pode('inscricao.inscritos.legado'))
                                 <div class="inline-flex items-center justify-center gap-1.5" title="{{ $inscricao->legado ? 'Registro Legado: clique para liberar edição' : 'Clique para marcar como Legado (somente leitura)' }}">
                                     <x-toggle :status="(bool) $inscricao->legado" action="toggleLegado({{ $inscricao->id }})" />
                                     @if($inscricao->legado)
@@ -312,7 +338,7 @@
                                 $temLaudoPcd = !empty($dinInscRow['laudo_pcd']);
                             @endphp
                             @if($isPcd)
-                                @if($temLaudoPcd)
+                                @if($temLaudoPcd && $pode('inscricao.inscritos.visualizar_laudo'))
                                     <button type="button"
                                             wire:click.stop="abrirModalLaudoPcd({{ $inscricao->id }})"
                                             class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-300 hover:bg-indigo-100 hover:border-indigo-400 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700 transition cursor-pointer shadow-2xs"
@@ -323,7 +349,7 @@
                                     </button>
                                 @else
                                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800"
-                                          title="PcD: {{ $inscricao->natureza_deficiencia ?: 'Deficiência declarada' }} (Laudo não anexado na inscrição)">
+                                          title="PcD: {{ $inscricao->natureza_deficiencia ?: 'Deficiência declarada' }}">
                                         <i class="ph-fill ph-wheelchair text-xs"></i> Sim
                                     </span>
                                 @endif
@@ -348,38 +374,36 @@
 
                                 $temTel  = $cTel->isNotEmpty();
                                 $respTel = $cTel->where('houve_resposta', true)->isNotEmpty();
+                                $podeRegistrarContato = $pode('inscricao.inscritos.registrar_contato');
                             @endphp
                             <div class="inline-flex items-center justify-center gap-1.5">
-                                {{-- Flag 1: E-mail --}}
                                 <button type="button"
-                                        wire:click="abrirModalContato({{ $inscricao->id }}, 'email')"
-                                        class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition-all shadow-2xs {{ $temEmail ? 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-blue-600 hover:border-blue-300 dark:bg-gray-800 dark:border-gray-700' }}"
-                                        title="{{ $temEmail ? 'E-mail: ' . $cEmail->count() . ' tentativa(s) registrada(s)' . ($respEmail ? ' (Respondido)' : '') : 'Registrar tentativa de contato por E-mail' }}">
+                                        @if($podeRegistrarContato) wire:click="abrirModalContato({{ $inscricao->id }}, 'email')" @else disabled @endif
+                                        class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition-all shadow-2xs {{ $temEmail ? 'bg-blue-600 text-white border-blue-700' : 'bg-gray-50 text-gray-400 border-gray-200 dark:bg-gray-800 dark:border-gray-700' }} {{ $podeRegistrarContato ? ($temEmail ? 'hover:bg-blue-700' : 'hover:text-blue-600 hover:border-blue-300') : 'cursor-default opacity-80' }}"
+                                        title="{{ $temEmail ? 'E-mail: ' . $cEmail->count() . ' tentativa(s) registrada(s)' . ($respEmail ? ' (Respondido)' : '') : 'Contato por E-mail' }}">
                                     <i class="{{ $temEmail ? 'ph-fill' : 'ph-bold' }} ph-envelope-simple text-sm"></i>
                                     @if($respEmail)
-                                        <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-gray-900" title="Candidato respondeu"></span>
+                                        <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-gray-900"></span>
                                     @endif
                                 </button>
 
-                                {{-- Flag 2: WhatsApp --}}
                                 <button type="button"
-                                        wire:click="abrirModalContato({{ $inscricao->id }}, 'whatsapp')"
-                                        class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition-all shadow-2xs {{ $temWpp ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-emerald-600 hover:border-emerald-300 dark:bg-gray-800 dark:border-gray-700' }}"
-                                        title="{{ $temWpp ? 'WhatsApp: ' . $cWpp->count() . ' tentativa(s) registrada(s)' . ($respWpp ? ' (Respondido)' : '') : 'Registrar tentativa de contato por WhatsApp' }}">
+                                        @if($podeRegistrarContato) wire:click="abrirModalContato({{ $inscricao->id }}, 'whatsapp')" @else disabled @endif
+                                        class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition-all shadow-2xs {{ $temWpp ? 'bg-emerald-600 text-white border-emerald-700' : 'bg-gray-50 text-gray-400 border-gray-200 dark:bg-gray-800 dark:border-gray-700' }} {{ $podeRegistrarContato ? ($temWpp ? 'hover:bg-emerald-700' : 'hover:text-emerald-600 hover:border-emerald-300') : 'cursor-default opacity-80' }}"
+                                        title="{{ $temWpp ? 'WhatsApp: ' . $cWpp->count() . ' tentativa(s) registrada(s)' . ($respWpp ? ' (Respondido)' : '') : 'Contato por WhatsApp' }}">
                                     <i class="{{ $temWpp ? 'ph-fill' : 'ph-bold' }} ph-whatsapp-logo text-sm"></i>
                                     @if($respWpp)
-                                        <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-white dark:ring-gray-900" title="Candidato respondeu"></span>
+                                        <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-white dark:ring-gray-900"></span>
                                     @endif
                                 </button>
 
-                                {{-- Flag 3: Telefone --}}
                                 <button type="button"
-                                        wire:click="abrirModalContato({{ $inscricao->id }}, 'telefone')"
-                                        class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition-all shadow-2xs {{ $temTel ? 'bg-purpura-600 text-white border-purpura-700 hover:bg-purpura-700' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-purpura-600 hover:border-purpura-300 dark:bg-gray-800 dark:border-gray-700' }}"
-                                        title="{{ $temTel ? 'Telefone: ' . $cTel->count() . ' tentativa(s) registrada(s)' . ($respTel ? ' (Atendido/Respondido)' : '') : 'Registrar tentativa de contato por Telefone' }}">
+                                        @if($podeRegistrarContato) wire:click="abrirModalContato({{ $inscricao->id }}, 'telefone')" @else disabled @endif
+                                        class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition-all shadow-2xs {{ $temTel ? 'bg-purpura-600 text-white border-purpura-700' : 'bg-gray-50 text-gray-400 border-gray-200 dark:bg-gray-800 dark:border-gray-700' }} {{ $podeRegistrarContato ? ($temTel ? 'hover:bg-purpura-700' : 'hover:text-purpura-600 hover:border-purpura-300') : 'cursor-default opacity-80' }}"
+                                        title="{{ $temTel ? 'Telefone: ' . $cTel->count() . ' tentativa(s) registrada(s)' . ($respTel ? ' (Atendido/Respondido)' : '') : 'Contato por Telefone' }}">
                                     <i class="{{ $temTel ? 'ph-fill' : 'ph-bold' }} ph-phone-call text-sm"></i>
                                     @if($respTel)
-                                        <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-gray-900" title="Candidato atendeu/respondeu"></span>
+                                        <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-gray-900"></span>
                                     @endif
                                 </button>
                             </div>
@@ -467,7 +491,7 @@
                             @php
                                 $isMatriculadoRow = $inscricao->student_id ? (bool) ($matriculadosMap[$inscricao->student_id] ?? false) : false;
                             @endphp
-                            @if(!$inscricao->legado && feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+                            @if(!$inscricao->legado && $pode('inscricao.inscritos.matricular'))
                                 <div class="inline-flex items-center justify-center gap-1.5"
                                      title="{{ $isMatriculadoRow ? 'Matriculado (acesso do estudante ativo)' : 'Ativar matrícula e criar acesso do estudante' }}">
                                     <x-toggle :status="$isMatriculadoRow" action="toggleMatriculaInscricao({{ $inscricao->id }})" />
@@ -484,29 +508,31 @@
                         
                         <td class="px-4 py-1.5 text-right whitespace-nowrap">
                             <div class="flex items-center justify-end gap-1">
-                                <button type="button"
-                                        wire:click="abrirDrawerComunicacoes({{ $inscricao->id }})"
-                                        class="p-1.5 text-indigo-600 transition-colors rounded hover:text-indigo-800 hover:bg-indigo-50 dark:hover:bg-gray-600"
-                                        title="Ver Comunicações Disparadas (Todas, WhatsApp e E-mail)">
-                                    <i class="text-lg ph-bold ph-chats-circle"></i>
-                                </button>
+                                @if($pode('inscricao.inscritos.visualizar_comunicados'))
+                                    <button type="button"
+                                            wire:click="abrirDrawerComunicacoes({{ $inscricao->id }})"
+                                            class="p-1.5 text-indigo-600 transition-colors rounded hover:text-indigo-800 hover:bg-indigo-50 dark:hover:bg-gray-600"
+                                            title="Ver Comunicações Disparadas (Todas, WhatsApp e E-mail)">
+                                        <i class="text-lg ph-bold ph-chats-circle"></i>
+                                    </button>
+                                @endif
 
-                                <button type="button" 
-                                    x-data 
-                                    @click="
-                                        $wire.gerarLinkRetomada({{ $inscricao->id }}).then(() => {
-                                            // Ouve o evento emitido pelo backend e copia
-                                        });
-                                        window.addEventListener('copiar-para-clipboard', event => {
-                                            navigator.clipboard.writeText(event.detail.text);
-                                        }, { once: true });
-                                    "
-                                    class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600" 
-                                    title="Copiar Link de Retomada">
-                                    <i class="text-lg ph-bold ph-link"></i>
-                                </button>
+                                @if($pode('inscricao.inscritos.retomar'))
+                                    <button type="button" 
+                                        x-data 
+                                        @click="
+                                            $wire.gerarLinkRetomada({{ $inscricao->id }}).then(() => {});
+                                            window.addEventListener('copiar-para-clipboard', event => {
+                                                navigator.clipboard.writeText(event.detail.text);
+                                            }, { once: true });
+                                        "
+                                        class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600" 
+                                        title="Copiar Link de Retomada">
+                                        <i class="text-lg ph-bold ph-link"></i>
+                                    </button>
+                                @endif
 
-                                @if($this->inscricaoPodeEnviarDocumentos($inscricao))
+                                @if($this->inscricaoPodeEnviarDocumentos($inscricao) && ($pode('inscricao.inscritos.enviar_docs') || $pode('inscricao.inscritos.validar_docs')))
                                     <button type="button"
                                             wire:click="abrirModalDocumentacao({{ $inscricao->id }})"
                                             class="p-1.5 text-purpura-600 bg-purpura-50 hover:bg-purpura-100 border border-purpura-200 transition-colors rounded dark:bg-purpura-900/30 dark:border-purpura-800 dark:text-purpura-300"
@@ -515,25 +541,28 @@
                                     </button>
                                 @endif
 
-                                <button type="button"
-                                        wire:click="baixarFichaInscricaoPdf({{ $inscricao->id }})"
-                                        wire:loading.attr="disabled"
-                                        class="p-1.5 text-gray-400 transition-colors rounded hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-gray-600"
-                                        title="Baixar Ficha de Inscrição (PDF)">
-                                    <i class="text-lg ph-bold ph-file-pdf"></i>
-                                </button>
+                                @if($pode('inscricao.inscritos.baixar_fichar'))
+                                    <button type="button"
+                                            wire:click="baixarFichaInscricaoPdf({{ $inscricao->id }})"
+                                            wire:loading.attr="disabled"
+                                            class="p-1.5 text-gray-400 transition-colors rounded hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-gray-600"
+                                            title="Baixar Ficha de Inscrição (PDF)">
+                                        <i class="text-lg ph-bold ph-file-pdf"></i>
+                                    </button>
+                                @endif
 
-                                <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-info"></i></button>
-                                
-                                <button wire:click="abrirRegras({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualizar Critérios e Acertos"><i class="text-lg ph ph-star"></i></button>
+                                @if($pode('inscricao.inscritos.visualizar'))
+                                    <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-info"></i></button>
+                                    <button wire:click="abrirRegras({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualizar Critérios e Acertos"><i class="text-lg ph ph-star"></i></button>
+                                @endif
 
-                                @if(feature('inscricao.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.visualizar')))
+                                @if($pode('inscricao.inscritos.detalhar'))
                                     <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 font-bold hover:text-blue-400" title="Ver Perfil Completo">
                                         <i class="text-lg ph-bold ph-eye"></i>
                                     </a>
                                 @endif
 
-                                @if(!$inscricao->legado && feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+                                @if(!$inscricao->legado && $pode('inscricao.inscritos.avancar'))
                                     <button type="button"
                                             wire:click="avancarEtapaIndividual({{ $inscricao->id }})"
                                             class="p-1.5 text-blue-600 transition-colors rounded hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-gray-600"
@@ -542,7 +571,7 @@
                                     </button>
                                 @endif
 
-                                @if(!in_array((int) $inscricao->etapa_atual, [99, 100], true))
+                                @if(!in_array((int) $inscricao->etapa_atual, [99, 100], true) && $pode('inscricao.inscritos.comunicar_retomada'))
                                     <button type="button"
                                             wire:click="abrirModalContinuidade({{ $inscricao->id }})"
                                             class="p-1.5 text-amber-600 transition-colors rounded hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-gray-600"
@@ -551,14 +580,16 @@
                                     </button>
                                 @endif
 
-                                <button type="button"
-                                        wire:click="abrirModalPrimeiroContato({{ $inscricao->id }})"
-                                        class="p-1.5 text-emerald-600 transition-colors rounded hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-gray-600"
-                                        title="Disparar 1ª Mensagem de Contato (E-mail / WhatsApp Suri)">
-                                    <i class="text-lg ph-bold ph-paper-plane-tilt"></i>
-                                </button>
+                                @if($pode('inscricao.inscritos.comunicar'))
+                                    <button type="button"
+                                            wire:click="abrirModalPrimeiroContato({{ $inscricao->id }})"
+                                            class="p-1.5 text-emerald-600 transition-colors rounded hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-gray-600"
+                                            title="Disparar 1ª Mensagem de Contato (E-mail / WhatsApp Suri)">
+                                        <i class="text-lg ph-bold ph-paper-plane-tilt"></i>
+                                    </button>
+                                @endif
 
-                                @if(!$inscricao->legado && feature('inscricao.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.excluir')))
+                                @if(!$inscricao->legado && $pode('inscricao.inscritos.excluir'))
                                     <button wire:click="excluirInscricao({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-red-600 transition" title="Excluir" onclick="confirm('Excluir permanentemente essa inscrição do sistema?') || event.stopImmediatePropagation()">
                                         <i class="text-lg ph-bold ph-trash"></i>
                                     </button>
@@ -595,7 +626,7 @@
                                     </span>
 
                                     @if($isPcdCard)
-                                        @if($temLaudoCard)
+                                        @if($temLaudoCard && $pode('inscricao.inscritos.visualizar_laudo'))
                                             <button type="button"
                                                     wire:click.stop="abrirModalLaudoPcd({{ $inscricao->id }})"
                                                     class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-300 hover:bg-indigo-100 transition cursor-pointer"
@@ -603,28 +634,18 @@
                                                 <i class="ph-fill ph-wheelchair"></i> PcD <i class="ph-bold ph-file-text text-purpura-600"></i>
                                             </button>
                                         @else
-                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200" title="PcD: {{ $inscricao->natureza_deficiencia ?: 'Sim' }} (Sem laudo anexado)">
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200" title="PcD: {{ $inscricao->natureza_deficiencia ?: 'Sim' }}">
                                                 <i class="ph-fill ph-wheelchair"></i> PcD
                                             </span>
                                         @endif
                                     @endif
                                 </div>
                                 
-                                <div class="flex items-center gap-2">
-                                    <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-card-{{ $inscricao->id }}">
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center justify-between mb-4 w-full">
-                                @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
-                                <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded border" style="background-color: {{ $corHex }}10; color: {{ $corHex }}; border-color: {{ $corHex }}30;">
-                                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: {{ $corHex }};"></span>
-                                    {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
-                                </span>
-                                
-                                <div class="flex items-center gap-2">
-                                    <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-card-{{ $inscricao->id }}">
-                                </div>
+                                @if($pode('inscricao.inscritos.selecionar'))
+                                    <div class="flex items-center gap-2">
+                                        <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-card-{{ $inscricao->id }}">
+                                    </div>
+                                @endif
                             </div>
 
                             <div class="flex items-center gap-3 mb-4 w-full">
@@ -661,9 +682,15 @@
                             </div>
 
                             <div class="flex items-center justify-end gap-1 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 w-full">
-                                <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-700 rounded-md transition"><i class="text-lg ph ph-info"></i></button>
-                                <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-700 rounded-md transition"><i class="text-lg ph ph-arrow-right"></i></a>
-                                <button wire:click="excluirInscricao({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded-md transition" onclick="confirm('Excluir permanentemente essa inscrição?') || event.stopImmediatePropagation()"><i class="text-lg ph ph-trash"></i></button>
+                                @if($pode('inscricao.inscritos.visualizar'))
+                                    <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-700 rounded-md transition" title="Visualização Rápida"><i class="text-lg ph ph-info"></i></button>
+                                @endif
+                                @if($pode('inscricao.inscritos.detalhar'))
+                                    <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-700 rounded-md transition" title="Ver Perfil Completo"><i class="text-lg ph ph-arrow-right"></i></a>
+                                @endif
+                                @if(!$inscricao->legado && $pode('inscricao.inscritos.excluir'))
+                                    <button wire:click="excluirInscricao({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded-md transition" title="Excluir" onclick="confirm('Excluir permanentemente essa inscrição?') || event.stopImmediatePropagation()"><i class="text-lg ph ph-trash"></i></button>
+                                @endif
                             </div>
 
                         </div>
@@ -813,9 +840,11 @@
         </div>
     @endif
 
-    <x-fab :actions="$this->fabActions"
-    main-color="bg-purpura-600 hover:bg-purpura-700"
-    mainIcon="ph ph-plus" />
+    @if(count($this->fabActions) > 0)
+        <x-fab :actions="$this->fabActions"
+        main-color="bg-purpura-600 hover:bg-purpura-700"
+        mainIcon="ph ph-plus" />
+    @endif
 
     {{-- MODAL DE NOVA INSCRIÇÃO --}}
     @if($modalAberto)
@@ -1575,20 +1604,22 @@
                                         </a>
                                     @endif
 
-                                    @if(!empty($infoDocM['id']) && !$aprovadoDoc)
+                                    @if(!empty($infoDocM['id']) && !$aprovadoDoc && $pode('inscricao.inscritos.validar_docs'))
                                         <button type="button" wire:click="aprovarDocumentoModalManualmente({{ $docItem['id'] }})" class="px-2.5 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 transition">
                                             Aprovar
                                         </button>
                                     @endif
 
-                                    <label class="px-3 py-1.5 bg-purpura-600 hover:bg-purpura-700 text-white text-xs font-semibold rounded-md cursor-pointer transition inline-flex items-center gap-1.5">
-                                        <i class="ph ph-upload-simple text-sm"></i>
-                                        <span wire:loading.remove wire:target="uploadsDocModal.{{ $docItem['id'] }}">
-                                            {{ !empty($infoDocM['id']) ? 'Substituir' : 'Enviar arquivo' }}
-                                        </span>
-                                        <span wire:loading wire:target="uploadsDocModal.{{ $docItem['id'] }}">Enviando...</span>
-                                        <input type="file" wire:model="uploadsDocModal.{{ $docItem['id'] }}" accept=".jpg,.jpeg,.png,.webp,.pdf" class="hidden">
-                                    </label>
+                                    @if($pode('inscricao.inscritos.enviar_docs'))
+                                        <label class="px-3 py-1.5 bg-purpura-600 hover:bg-purpura-700 text-white text-xs font-semibold rounded-md cursor-pointer transition inline-flex items-center gap-1.5">
+                                            <i class="ph ph-upload-simple text-sm"></i>
+                                            <span wire:loading.remove wire:target="uploadsDocModal.{{ $docItem['id'] }}">
+                                                {{ !empty($infoDocM['id']) ? 'Substituir' : 'Enviar arquivo' }}
+                                            </span>
+                                            <span wire:loading wire:target="uploadsDocModal.{{ $docItem['id'] }}">Enviando...</span>
+                                            <input type="file" wire:model="uploadsDocModal.{{ $docItem['id'] }}" accept=".jpg,.jpeg,.png,.webp,.pdf" class="hidden">
+                                        </label>
+                                    @endif
                                 </div>
                             </div>
                         @empty

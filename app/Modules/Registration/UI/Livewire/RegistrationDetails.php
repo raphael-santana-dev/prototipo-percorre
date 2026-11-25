@@ -22,6 +22,7 @@ use App\Modules\Matricula\Domain\Models\DocumentoMatricula;
 use App\Modules\Matricula\Services\AiValidationService;
 use App\Traits\ComPadraoListagem;
 use App\Traits\WithEditingLock;
+use App\Traits\ValidaAcesso;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -36,7 +37,19 @@ class RegistrationDetails extends Component
     use WithPagination;
     use ComPadraoListagem;
     use WithEditingLock;
-    use \App\Traits\WithFichaPdfDownload;
+    use ValidaAcesso;
+    use \App\Traits\WithFichaPdfDownload {
+        baixarFichaInscricaoPdf as traitBaixarFichaInscricaoPdf;
+    }
+
+    public function baixarFichaInscricaoPdf(int $inscricaoId)
+    {
+        if (!$this->autorizarAcao('inscricao.inscritos.baixar_fichar', 'baixar ficha de inscrição em PDF')) {
+            return null;
+        }
+
+        return $this->traitBaixarFichaInscricaoPdf($inscricaoId);
+    }
 
     public Inscricao $inscricao;
     public $status_selecionado;
@@ -84,6 +97,8 @@ class RegistrationDetails extends Component
 
     public function mount($id)
     {
+        $this->autorizarTela('inscricao.inscritos.detalhar', 'detalhes da inscrição');
+
         $this->inscricao = Inscricao::with(['unidade', 'curso', 'turno', 'ciclo'])->findOrFail($id);
         $this->status_selecionado = $this->inscricao->status_inscricao_id;
         
@@ -165,32 +180,24 @@ class RegistrationDetails extends Component
     public function usuarioPodeEditarAssistido(): bool
     {
         $user = auth()->user();
-        if (!$user) return false;
-
-        if ($this->inscricao->legado) {
-            return false;
-        }
-
-        return $user->hasAnyRole(['dev', 'admin'])
-            || $user->can('inscricao.editar')
-            || $user->can('inscricao.criar');
-    }
-
-    public function usuarioPodeAlterarVinculoAcademico(): bool
-    {
-        $user = auth()->user();
         if (!$user || $this->inscricao->legado) {
             return false;
         }
 
-        return $user->hasAnyRole(['dev', 'admin'])
-            || $user->can('inscricao.edicao.solicitacao_troca')
-            || $user->can('inscricao.alterar_vinculo');
+        return feature('inscricao.inscritos.editar')
+            && ($user->hasRole('dev') || $user->can('inscricao.inscritos.editar'));
+    }
+
+    public function usuarioPodeAlterarVinculoAcademico(): bool
+    {
+        return $this->usuarioPodeEditarAssistido();
     }
 
     public function abrirModalTrocaVinculo(): void
     {
-        abort_unless($this->usuarioPodeAlterarVinculoAcademico(), 403, 'Sem permissão para alterar Unidade/Curso/Turno.');
+        if (!$this->autorizarAcao('inscricao.inscritos.editar', 'alterar vínculo acadêmico da inscrição') || $this->inscricao->legado) {
+            return;
+        }
 
         if ($this->bloquearSeEmEdicaoPorOutro()) {
             return;
@@ -353,7 +360,9 @@ class RegistrationDetails extends Component
 
     public function salvarTrocaVinculoDireta(): void
     {
-        abort_unless($this->usuarioPodeAlterarVinculoAcademico(), 403, 'Sem permissão para alterar Unidade/Curso/Turno.');
+        if (!$this->autorizarAcao('inscricao.inscritos.editar', 'salvar alteração de vínculo acadêmico') || $this->inscricao->legado) {
+            return;
+        }
 
         if ($this->bloquearSeEmEdicaoPorOutro()) {
             return;
@@ -533,7 +542,9 @@ class RegistrationDetails extends Component
 
     public function iniciarEdicaoAssistida(): void
     {
-        abort_unless($this->usuarioPodeEditarAssistido(), 403, 'Sem permissão para edição assistida.');
+        if (!$this->autorizarAcao('inscricao.inscritos.editar', 'iniciar edição assistida da inscrição') || $this->inscricao->legado) {
+            return;
+        }
 
         if ($this->bloquearSeEmEdicaoPorOutro()) {
             return;
@@ -565,7 +576,9 @@ class RegistrationDetails extends Component
 
     public function salvarEdicaoAssistida(): void
     {
-        abort_unless($this->usuarioPodeEditarAssistido(), 403, 'Sem permissão.');
+        if (!$this->autorizarAcao('inscricao.inscritos.editar', 'salvar edição assistida da inscrição') || $this->inscricao->legado) {
+            return;
+        }
 
         if ($this->bloquearSeEmEdicaoPorOutro()) {
             return;
@@ -775,7 +788,10 @@ class RegistrationDetails extends Component
 
     public function updatedUploads($value, $documentoExigidoId): void
     {
-        abort_unless($this->usuarioPodeEditarAssistido(), 403, 'Sem permissão.');
+        if (!$this->autorizarAcao('inscricao.inscritos.enviar_docs', 'enviar documentação da inscrição') || $this->inscricao->legado) {
+            unset($this->uploads[$documentoExigidoId]);
+            return;
+        }
 
         if ($this->bloquearSeEmEdicaoPorOutro()) {
             unset($this->uploads[$documentoExigidoId]);
@@ -879,7 +895,9 @@ class RegistrationDetails extends Component
 
     public function aprovarDocumentoManualmente(int $documentoExigidoId): void
     {
-        abort_unless($this->usuarioPodeEditarAssistido(), 403);
+        if (!$this->autorizarAcao('inscricao.inscritos.validar_docs', 'aprovar documento manualmente')) {
+            return;
+        }
 
         if ($this->bloquearSeEmEdicaoPorOutro()) {
             return;
@@ -1024,7 +1042,9 @@ class RegistrationDetails extends Component
 
     public function abrirFormularioEmbed(): void
     {
-        abort_unless($this->usuarioPodeEditarAssistido(), 403);
+        if (!$this->autorizarAcao('inscricao.inscritos.editar', 'preencher formulário em nome do candidato') || $this->inscricao->legado) {
+            return;
+        }
 
         if ($this->bloquearSeEmEdicaoPorOutro()) {
             return;
@@ -1140,6 +1160,10 @@ class RegistrationDetails extends Component
 
     public function verConteudoEmail($logId)
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.visualizar_comunicados', 'visualizar conteúdo do comunicado')) {
+            return;
+        }
+
         $this->emailVisualizacao = \App\Modules\Comunicacao\Domain\Models\ComunicacaoLog::find($logId);
         $this->modalEmailAberto = true;
     }
@@ -1292,6 +1316,11 @@ class RegistrationDetails extends Component
 
     public function atualizarStatus()
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.status', 'alterar status da inscrição')) {
+            $this->status_selecionado = $this->inscricao->status_inscricao_id;
+            return;
+        }
+
         if ($this->bloquearSeEmEdicaoPorOutro()) {
             $this->status_selecionado = $this->inscricao->status_inscricao_id;
             return;
@@ -1341,6 +1370,12 @@ class RegistrationDetails extends Component
 
     public function executarMudancaStatusFinal()
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.status', 'confirmar alteração de status da inscrição')) {
+            $this->modalAntiSpamAberto = false;
+            $this->status_selecionado = $this->inscricao->status_inscricao_id;
+            return;
+        }
+
         if ($this->bloquearSeEmEdicaoPorOutro()) {
             $this->modalAntiSpamAberto = false;
             $this->status_selecionado = $this->inscricao->status_inscricao_id;
@@ -1364,6 +1399,10 @@ class RegistrationDetails extends Component
 
     public function abrirRegras()
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.visualizar', 'visualizar mapa de regras da inscrição')) {
+            return;
+        }
+
         $regrasRaw = is_string($this->inscricao->ciclo->regras_pontuacao)
             ? json_decode($this->inscricao->ciclo->regras_pontuacao, true)
             : ($this->inscricao->ciclo->regras_pontuacao ?? []);

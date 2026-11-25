@@ -79,7 +79,18 @@ class RegistrationManager extends Component
     public bool $contatoHouveResposta = false;
     public array $historicoContatosCanal = [];
 
-    use \App\Traits\WithFichaPdfDownload;
+    use \App\Traits\WithFichaPdfDownload {
+        baixarFichaInscricaoPdf as traitBaixarFichaInscricaoPdf;
+    }
+
+    public function baixarFichaInscricaoPdf(int $inscricaoId)
+    {
+        if (!$this->autorizarAcao('inscricao.inscritos.baixar_fichar', 'baixar ficha de inscrição em PDF')) {
+            return null;
+        }
+
+        return $this->traitBaixarFichaInscricaoPdf($inscricaoId);
+    }
 
     public bool $selecionarTudo = false;
 
@@ -106,6 +117,10 @@ class RegistrationManager extends Component
 
     public function abrirModalLaudoPcd(int $inscricaoId): void
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.visualizar_laudo', 'visualizar laudo médico PcD')) {
+            return;
+        }
+
         $insc = Inscricao::findOrFail($inscricaoId);
         $dinamicos = is_string($insc->dados_dinamicos)
             ? (json_decode($insc->dados_dinamicos, true) ?: [])
@@ -140,6 +155,10 @@ class RegistrationManager extends Component
 
     public function abrirDrawerComunicacoes(int $inscricaoId): void
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.visualizar_comunicados', 'visualizar histórico de comunicados')) {
+            return;
+        }
+
         $insc = Inscricao::findOrFail($inscricaoId);
         $this->comunicacoesInscricaoId      = $insc->id;
         $this->comunicacoesInscricaoNome    = (string) $insc->nome;
@@ -300,6 +319,15 @@ class RegistrationManager extends Component
 
     public function abrirModalDocumentacao(int $inscricaoId): void
     {
+        $u = auth()->user();
+        $podeEnviar = feature('inscricao.inscritos.enviar_docs') && ($u->hasRole('dev') || $u->can('inscricao.inscritos.enviar_docs'));
+        $podeValidar = feature('inscricao.inscritos.validar_docs') && ($u->hasRole('dev') || $u->can('inscricao.inscritos.validar_docs'));
+
+        if (!$podeEnviar && !$podeValidar) {
+            $this->autorizarAcao('inscricao.inscritos.enviar_docs', 'acessar documentação da inscrição');
+            return;
+        }
+
         $insc = Inscricao::with('ciclo')->findOrFail($inscricaoId);
 
         if (!$this->inscricaoPodeEnviarDocumentos($insc)) {
@@ -333,7 +361,7 @@ class RegistrationManager extends Component
 
     public function criarAcessosEmLote(): void
     {
-        if (!$this->autorizarAcao('inscricao.editar', 'criar acessos de estudantes em lote')) {
+        if (!$this->autorizarAcao('inscricao.inscritos.criar_acesso', 'criar acessos de estudantes em lote')) {
             return;
         }
 
@@ -387,7 +415,7 @@ class RegistrationManager extends Component
 
     public function toggleMatriculaInscricao(int $inscricaoId): void
     {
-        if (!$this->autorizarAcao('inscricao.editar', 'alterar matrícula do candidato')) {
+        if (!$this->autorizarAcao('inscricao.inscritos.matricular', 'alterar matrícula do candidato')) {
             return;
         }
 
@@ -539,6 +567,11 @@ class RegistrationManager extends Component
 
     public function updatedUploadsDocModal($value, $documentoExigidoId): void
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.enviar_docs', 'enviar documentação da inscrição')) {
+            unset($this->uploadsDocModal[$documentoExigidoId]);
+            return;
+        }
+
         if (!$this->docModalInscricaoId) return;
 
         $insc = Inscricao::with('ciclo')->findOrFail($this->docModalInscricaoId);
@@ -612,6 +645,10 @@ class RegistrationManager extends Component
 
     public function aprovarDocumentoModalManualmente(int $documentoExigidoId): void
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.validar_docs', 'aprovar documento manualmente')) {
+            return;
+        }
+
         if (!$this->docModalInscricaoId) return;
 
         $docMatricula = \App\Modules\Matricula\Domain\Models\DocumentoMatricula::where('inscricao_id', $this->docModalInscricaoId)
@@ -633,6 +670,10 @@ class RegistrationManager extends Component
 
     public function abrirModalPrimeiroContato(int $inscricaoId): void
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.comunicar', 'disparar 1ª mensagem de contato')) {
+            return;
+        }
+
         $insc = Inscricao::findOrFail($inscricaoId);
         $this->modoDisparoManual = 'primeiro_contato';
         $this->primeiroContatoInscricaoId = $insc->id;
@@ -656,6 +697,10 @@ class RegistrationManager extends Component
 
     public function abrirModalContinuidade(int $inscricaoId): void
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.comunicar_retomada', 'disparar mensagem de continuidade')) {
+            return;
+        }
+
         $insc = Inscricao::findOrFail($inscricaoId);
 
         if (in_array((int) $insc->etapa_atual, [99, 100], true)) {
@@ -714,6 +759,14 @@ class RegistrationManager extends Component
 
     public function dispararPrimeiroContato(): void
     {
+        $chaveDisparo = $this->modoDisparoManual === 'continuidade'
+            ? 'inscricao.inscritos.comunicar_retomada'
+            : 'inscricao.inscritos.comunicar';
+
+        if (!$this->autorizarAcao($chaveDisparo, 'disparar comunicação manual')) {
+            return;
+        }
+
         $this->validate([
             'primeiroContatoCanal'      => 'required|in:email,whatsapp,ambos',
             'primeiroContatoTemplateId' => 'required|exists:email_templates,id',
@@ -771,7 +824,7 @@ class RegistrationManager extends Component
     
     public function mount()
     {
-        $this->autorizarTela('inscricao.listar', 'gestão de inscrições');
+        $this->autorizarTela('inscricao.inscritos.listar', 'gestão de inscrições');
 
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')],
@@ -791,6 +844,10 @@ class RegistrationManager extends Component
 
     public function gerarLinkRetomada(int $id)
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.retomar', 'gerar link de retomada')) {
+            return;
+        }
+
         $inscricao = Inscricao::findOrFail($id);
         $token = \Illuminate\Support\Facades\Crypt::encrypt($inscricao->id);
         $urlRetomada = route('inscricao.retomar', ['token' => $token]);
@@ -930,6 +987,10 @@ class RegistrationManager extends Component
 
     public function abrirModalMoverCiclo()
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.editar', 'alterar ciclo das inscrições')) {
+            return;
+        }
+
         if (count($this->selecionadas) === 0) return;
         $this->cicloDestinoId = '';
         $this->modalMoverCicloAberto = true;
@@ -937,7 +998,7 @@ class RegistrationManager extends Component
 
     public function moverCicloLote()
     {
-        if (!$this->autorizarAcao('inscricao.editar', 'editar ou processar inscrições')) {
+        if (!$this->autorizarAcao('inscricao.inscritos.editar', 'alterar ciclo das inscrições')) {
             return;
         }
 
@@ -978,7 +1039,7 @@ class RegistrationManager extends Component
 
     public function abrirModal()
     {
-        if (!$this->autorizarAcao('inscricao.criar', 'cadastrar novas inscrições')) {
+        if (!$this->autorizarAcao('inscricao.inscritos.criar', 'cadastrar novas inscrições')) {
             return;
         }
 
@@ -989,7 +1050,7 @@ class RegistrationManager extends Component
 
     public function salvarNovaInscricao()
     {
-        if (!$this->autorizarAcao('inscricao.criar', 'cadastrar novas inscrições')) {
+        if (!$this->autorizarAcao('inscricao.inscritos.criar', 'cadastrar novas inscrições')) {
             return;
         }
 
@@ -1020,7 +1081,7 @@ class RegistrationManager extends Component
             'criado_por' => auth()->id() 
         ];
 
-        if (auth()->user()->hasRole('dev|admin') || auth()->user()->can('inscricao.aprovar')) {
+        if (auth()->user()->hasAnyRole(['dev', 'admin']) || auth()->user()->can('secretaria.solicitacoes.aprovar')) {
             $inscricao = Inscricao::create($payload);
             \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.criada', $inscricao);
 
@@ -1061,7 +1122,7 @@ class RegistrationManager extends Component
 
     public function toggleLegado(int $id): void
     {
-        if (!$this->autorizarAcao('inscricao.editar', 'alterar status de legado da inscrição')) {
+        if (!$this->autorizarAcao('inscricao.inscritos.legado', 'alterar status de legado da inscrição')) {
             return;
         }
 
@@ -1076,7 +1137,7 @@ class RegistrationManager extends Component
 
     public function definirLegadoEmLote(bool $statusLegado): void
     {
-        if (!$this->autorizarAcao('inscricao.editar', 'definir inscrições como legado em lote')) {
+        if (!$this->autorizarAcao('inscricao.inscritos.legado', 'definir inscrições como legado em lote')) {
             return;
         }
 
@@ -1095,7 +1156,7 @@ class RegistrationManager extends Component
 
     public function excluirInscricao($id)
     {
-        if (!$this->autorizarAcao('inscricao.excluir', 'excluir inscrições')) {
+        if (!$this->autorizarAcao('inscricao.inscritos.excluir', 'excluir inscrições')) {
             return;
         }
 
@@ -1156,6 +1217,10 @@ class RegistrationManager extends Component
 
     public function abrirRegras(int $id)
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.visualizar', 'visualizar critérios e acertos')) {
+            return;
+        }
+
         $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])->findOrFail($id);
         
         $regrasRaw = is_string($inscricao->ciclo->regras_pontuacao)
@@ -1271,8 +1336,17 @@ class RegistrationManager extends Component
 
     public function showQuickView(int $id)
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.visualizar', 'visualizar ficha rápida da inscrição')) {
+            return;
+        }
+
         $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])->findOrFail($id);
-        
+        $u = auth()->user();
+        $isDev = $u->hasRole('dev');
+        $podeStatus = feature('inscricao.inscritos.status') && ($isDev || $u->can('inscricao.inscritos.status'));
+        $podeLaudo = feature('inscricao.inscritos.visualizar_laudo') && ($isDev || $u->can('inscricao.inscritos.visualizar_laudo'));
+        $podeDetalhar = feature('inscricao.inscritos.detalhar') && ($isDev || $u->can('inscricao.inscritos.detalhar'));
+
         $statusDisponiveis = StatusInscricao::orderBy('nome')->get();
         
         if ($inscricao->legado) {
@@ -1280,6 +1354,9 @@ class RegistrationManager extends Component
                 . '<i class="ph-fill ph-lock-key text-base text-amber-600"></i>'
                 . '<span>REGISTRO LEGADO (' . mb_strtoupper($inscricao->statusInscricao->nome ?? 'Fixo', 'UTF-8') . ') — Somente Visualização</span>'
                 . '</div>';
+        } elseif (!$podeStatus) {
+            $botoesAcao = '<span class="inline-block mt-1 px-2.5 py-1 text-xs font-bold uppercase rounded border bg-gray-100 text-gray-700 border-gray-200">'
+                . e($inscricao->statusInscricao->nome ?? 'Pendente') . '</span>';
         } else {
             $botoesAcao = '<div class="mt-2 relative">';
             $botoesAcao .= '<select x-on:change="$dispatch(\'quick-change-status\', { id: '.$id.', statusId: $event.target.value })" class="w-full text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-purpura-500 focus:border-purpura-500 appearance-none cursor-pointer hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">';
@@ -1383,14 +1460,18 @@ class RegistrationManager extends Component
                 . '<div><span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold">Sim — Natureza: ' . e($natLabel) . '</span></div>';
 
             if (!empty($caminhoLaudoPcd)) {
-                $urlLaudo = asset('storage/' . $caminhoLaudoPcd);
-                $nomeLaudo = basename((string) $caminhoLaudoPcd);
-                $blocoPcdHtml .= '<div class="p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">'
-                    . '<span class="font-medium text-gray-700 dark:text-gray-200 truncate">' . e($nomeLaudo) . '</span>'
-                    . '<div class="flex items-center gap-1.5 shrink-0">'
-                    . '<a href="' . $urlLaudo . '" target="_blank" class="px-2.5 py-1 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 font-bold text-purpura-600 hover:bg-purpura-50">Visualizar ↗</a>'
-                    . '<a href="' . $urlLaudo . '" download="' . e($nomeLaudo) . '" class="px-2.5 py-1 rounded bg-purpura-600 text-white font-bold hover:bg-purpura-700">Baixar</a>'
-                    . '</div></div>';
+                if ($podeLaudo) {
+                    $urlLaudo = asset('storage/' . $caminhoLaudoPcd);
+                    $nomeLaudo = basename((string) $caminhoLaudoPcd);
+                    $blocoPcdHtml .= '<div class="p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">'
+                        . '<span class="font-medium text-gray-700 dark:text-gray-200 truncate">' . e($nomeLaudo) . '</span>'
+                        . '<div class="flex items-center gap-1.5 shrink-0">'
+                        . '<a href="' . $urlLaudo . '" target="_blank" class="px-2.5 py-1 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 font-bold text-purpura-600 hover:bg-purpura-50">Visualizar ↗</a>'
+                        . '<a href="' . $urlLaudo . '" download="' . e($nomeLaudo) . '" class="px-2.5 py-1 rounded bg-purpura-600 text-white font-bold hover:bg-purpura-700">Baixar</a>'
+                        . '</div></div>';
+                } else {
+                    $blocoPcdHtml .= '<div class="text-gray-500 text-xs">Laudo anexado (sem permissão para visualizar).</div>';
+                }
             } else {
                 $blocoPcdHtml .= '<div class="text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">'
                     . 'Laudo não enviado na inscrição (será exigido na matrícula).'
@@ -1399,18 +1480,23 @@ class RegistrationManager extends Component
             $blocoPcdHtml .= '</div>';
         }
 
+        $quickViewData = [
+            'Acessibilidade / PcD e Laudo' => $blocoPcdHtml,
+            'Status do Candidato'          => $botoesAcao,
+            'Interesse Acadêmico'          => '<div class="text-sm"><b>Unidade:</b> '.($inscricao->unidade->nome ?? '-').'<br><b>Curso:</b> '.($inscricao->curso->nome ?? '-').'<br><b>Turno:</b> '.($inscricao->turno->nome ?? '-').'</div>',
+            'Informações do Formulário'    => $detalhesDinamicos,
+            'Pontuação'                    => '<span class="font-bold text-purpura-600 text-2xl">'.$inscricao->pontuacao_total.' pts</span>',
+        ];
+
+        if ($podeDetalhar) {
+            $quickViewData['Ações Extras'] = '<a href="'.route('inscricoes.show', $inscricao->id).'" class="font-bold text-purpura-600 hover:underline">Ver Auditoria Completa</a>';
+        }
+
         $this->dispatch('load-quick-view', [
-            'title' => $inscricao->nome,
+            'title'    => $inscricao->nome,
             'subtitle' => 'CPF: ' . $inscricao->cpf . ' • ' . $inscricao->email,
-            'icon' => 'ph-user-focus',
-            'data' => [
-                'Acessibilidade / PcD e Laudo' => $blocoPcdHtml,
-                'Status do Candidato' => $botoesAcao,
-                'Interesse Acadêmico' => '<div class="text-sm"><b>Unidade:</b> '.($inscricao->unidade->nome ?? '-').'<br><b>Curso:</b> '.($inscricao->curso->nome ?? '-').'<br><b>Turno:</b> '.($inscricao->turno->nome ?? '-').'</div>',
-                'Informações do Formulário' => $detalhesDinamicos,
-                'Pontuação' => '<span class="font-bold text-purpura-600 text-2xl">'.$inscricao->pontuacao_total.' pts</span>',
-                'Ações Extras' => '<a href="'.route('inscricoes.show', $inscricao->id).'" class="font-bold text-purpura-600 hover:underline">Ver Auditoria Completa</a>'
-            ]
+            'icon'     => 'ph-user-focus',
+            'data'     => $quickViewData,
         ]);
     }
 
@@ -1491,7 +1577,7 @@ class RegistrationManager extends Component
     #[On('quick-change-status')]
     public function alterarStatusQuickView($id, $statusId)
     {
-        if (!$this->autorizarAcao('inscricao.editar', 'editar ou processar inscrições')) {
+        if (!$this->autorizarAcao('inscricao.inscritos.status', 'alterar status da inscrição')) {
             return;
         }
 
@@ -1520,6 +1606,10 @@ class RegistrationManager extends Component
 
     public function abrirModalSolicitacao()
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.status', 'solicitar alteração de status')) {
+            return;
+        }
+
         if (count($this->selecionadas) === 0) {
             $this->dispatch('erro', msg: 'Selecione pelo menos uma inscrição para solicitar alteração.');
             return;
@@ -1541,6 +1631,10 @@ class RegistrationManager extends Component
 
     public function enviarSolicitacaoAlteracao()
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.status', 'enviar solicitação de alteração de status')) {
+            return;
+        }
+
         $this->validate([
             'justificativaSolicitacao' => 'required|string|min:10',
             'statusDesejadoSolicitacao' => 'required|exists:status_inscricoes,id',
@@ -1584,6 +1678,10 @@ class RegistrationManager extends Component
 
     public function selecionarQuantidade($quantidade)
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.selecionar', 'selecionar inscrições em lote')) {
+            return;
+        }
+
         $this->desmarcarTodas();
         $query = $this->obterQueryFiltrada();
         $temRanking = (clone $query)->whereNotNull('posicao_ranking_geral')->exists();
@@ -1610,11 +1708,19 @@ class RegistrationManager extends Component
 
     public function abrirModalSelecaoAvancada()
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.selecionar', 'usar seleção avançada')) {
+            return;
+        }
+
         $this->modalSelecaoAvancadaAberto = true;
     }
 
     public function executarSelecaoAvancada()
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.selecionar', 'executar seleção avançada')) {
+            return;
+        }
+
         $this->validate(['selecaoQtd' => 'required|integer|min:1']);
         
         $cicloIdReferencia = $this->filtroCiclo ?: $this->obterCicloPadrao()?->id;
@@ -1695,6 +1801,11 @@ class RegistrationManager extends Component
 
     public function updatedSelecionarTudo($value): void
     {
+        if ($value && !$this->autorizarAcao('inscricao.inscritos.selecionar', 'selecionar página de inscrições')) {
+            $this->selecionarTudo = false;
+            return;
+        }
+
         if ($value) {
             $idsPagina = $this->obterQueryFiltrada()
                 ->apenasVinculosPermitidos()
@@ -1717,6 +1828,10 @@ class RegistrationManager extends Component
 
     public function solicitarExportacao($formato = 'csv')
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.exportar', 'exportar inscrições')) {
+            return;
+        }
+
         if (!is_string($formato)) {
             $formato = 'csv';
         }
@@ -1766,6 +1881,10 @@ class RegistrationManager extends Component
 
     public function abrirModalLote()
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.status', 'alterar status em lote')) {
+            return;
+        }
+
         if (count($this->selecionadas) === 0) return;
         $this->novoStatusId = '';
         $this->modalLoteAberto = true;
@@ -1788,7 +1907,7 @@ class RegistrationManager extends Component
 
     public function alterarStatusLoteRapido($statusId)
     {
-        if (!$this->autorizarAcao('inscricao.editar', 'editar ou processar inscrições')) {
+        if (!$this->autorizarAcao('inscricao.inscritos.status', 'alterar status em lote')) {
             return;
         }
         
@@ -1870,7 +1989,7 @@ class RegistrationManager extends Component
 
     public function recalcularScoresGlobais()
     {
-        if (!$this->autorizarAcao('inscricao.editar', 'editar ou processar inscrições')) {
+        if (!$this->autorizarAcao('inscricao.ciclo.regras', 'recalcular pontuação do ciclo')) {
             return;
         }
         
@@ -1904,7 +2023,7 @@ class RegistrationManager extends Component
 
     public function gerarRankingGlobal()
     {
-        if (!$this->autorizarAcao('inscricao.editar', 'editar ou processar inscrições')) {
+        if (!$this->autorizarAcao('inscricao.ciclo.regras', 'gerar ranking do ciclo')) {
             return;
         }
 
@@ -1930,6 +2049,11 @@ class RegistrationManager extends Component
 
     public function getFabActionsProperty()
     {
+        $u = auth()->user();
+        if (!feature('inscricao.ciclo.regras') || (!$u->hasRole('dev') && !$u->can('inscricao.ciclo.regras'))) {
+            return [];
+        }
+
         return [
             [
                 'label' => 'Gerar Rankings',
@@ -2051,6 +2175,10 @@ class RegistrationManager extends Component
     
     public function abrirModalContato(int $inscricaoId, string $canal)
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.registrar_contato', 'registrar contato com candidato')) {
+            return;
+        }
+
         $inscricao = Inscricao::with('contatos')->findOrFail($inscricaoId);
         $this->contatoInscricaoId = $inscricao->id;
         $this->contatoInscricaoNome = $inscricao->nome;
@@ -2091,6 +2219,10 @@ class RegistrationManager extends Component
 
     public function salvarContato()
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.registrar_contato', 'salvar registro de contato')) {
+            return;
+        }
+
         if (!$this->contatoInscricaoId) return;
 
         $dados = [
@@ -2125,6 +2257,10 @@ class RegistrationManager extends Component
 
     public function excluirRegistroContato(int $registroId)
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.registrar_contato', 'excluir registro de contato')) {
+            return;
+        }
+
         \App\Models\InscricaoContato::where('inscricao_id', $this->contatoInscricaoId)->where('id', $registroId)->delete();
         $this->novoRegistroContatoNoModal();
         $this->carregarHistoricoContatosCanal();
@@ -2143,6 +2279,10 @@ class RegistrationManager extends Component
 
     public function selecionarTop($quantidade)
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.selecionar', 'selecionar top inscrições')) {
+            return;
+        }
+
         $query = (clone $this->obterQueryFiltrada());
         
         $ids = $query->orderByRaw('posicao_ranking_geral ASC NULLS LAST')
@@ -2157,7 +2297,7 @@ class RegistrationManager extends Component
 
     public function avancarEtapaIndividual(int $id): void
     {
-        if (!$this->autorizarAcao('inscricao.editar', 'editar ou processar inscrições')) {
+        if (!$this->autorizarAcao('inscricao.inscritos.avancar', 'avançar etapa da inscrição')) {
             return;
         }
 
@@ -2198,7 +2338,7 @@ class RegistrationManager extends Component
 
     public function avancarSelecionadas()
     {
-        if (!$this->autorizarAcao('inscricao.editar', 'editar ou processar inscrições')) {
+        if (!$this->autorizarAcao('inscricao.inscritos.avancar', 'avançar inscrições selecionadas')) {
             return;
         }
 

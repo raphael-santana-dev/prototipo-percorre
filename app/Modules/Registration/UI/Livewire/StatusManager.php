@@ -12,6 +12,7 @@ use Livewire\WithPagination;
 use App\Helpers\BreadcrumbHelper;
 use App\Traits\ComPadraoListagem;
 use App\Traits\WithToggleStatus;
+use App\Traits\ValidaAcesso;
 
 use Illuminate\Support\Str;
 
@@ -22,6 +23,7 @@ class StatusManager extends Component
     use WithPagination;
     use ComPadraoListagem;
     use WithToggleStatus;
+    use ValidaAcesso;
 
     public bool $showModal = false;
     public bool $isEditMode = false;
@@ -41,16 +43,16 @@ class StatusManager extends Component
 
     public function mount()
     {
-        //abort_if(!feature('status.listar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.listar'), 403);
+        $this->autorizarTela('secretaria.status_inscricao.listar', 'status de inscrição');
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
     }
 
     public function openModal()
     {
-        //abort_if(!feature('status.criar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.criar'), 403);
+        if (!$this->autorizarAcao('secretaria.status_inscricao.criar', 'criar novo status de inscrição')) {
+            return;
+        }
 
         $this->resetInputFields();
         $this->showModal = true;
@@ -58,8 +60,9 @@ class StatusManager extends Component
 
     public function toggleVisibilidade($id)
     {
-        //abort_if(!feature('status.editar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.editar'), 403);
+        if (!$this->autorizarAcao('secretaria.status_inscricao.status', 'alterar visibilidade do status')) {
+            return;
+        }
 
         $status = StatusInscricao::findOrFail($id);
         $status->visivel_estudante = !$status->visivel_estudante;
@@ -70,8 +73,9 @@ class StatusManager extends Component
 
     public function edit(int $id)
     {
-        //abort_if(!feature('status.editar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.editar'), 403);
+        if (!$this->autorizarAcao('secretaria.status_inscricao.editar', 'editar status de inscrição')) {
+            return;
+        }
 
         $this->resetInputFields();
         $status = StatusInscricao::findOrFail($id);
@@ -82,7 +86,7 @@ class StatusManager extends Component
         $this->cor = $status->cor ?? '#9CA3AF';
         $this->isEditMode = true;
         $this->titulo_amigavel = $status->titulo_amigavel ?? '';
-        $this->visivel_estudante = $status->visivel_estudante ??
+        $this->visivel_estudante = (bool) ($status->visivel_estudante ?? true);
         
         $this->isInUse = Inscricao::where('status_inscricao_id', $id)->exists();
         
@@ -92,16 +96,18 @@ class StatusManager extends Component
     public function save()
     {
         if ($this->isEditMode) {
-            //abort_if(!feature('status.editar'), 403);
-            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.editar'), 403);
+            if (!$this->autorizarAcao('secretaria.status_inscricao.editar', 'salvar edição do status de inscrição')) {
+                return;
+            }
             
             if ($this->isInUse) {
                 $statusAntigo = StatusInscricao::findOrFail($this->statusId);
                 $this->nome = $statusAntigo->nome; 
             }
         } else {
-            //abort_if(!feature('status.criar'), 403);
-            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.criar'), 403);
+            if (!$this->autorizarAcao('secretaria.status_inscricao.criar', 'cadastrar novo status de inscrição')) {
+                return;
+            }
         }
 
         $this->validate([
@@ -132,8 +138,9 @@ class StatusManager extends Component
 
     public function delete(int $id)
     {
-        //abort_if(!feature('status.excluir'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.excluir'), 403);
+        if (!$this->autorizarAcao('secretaria.status_inscricao.excluir', 'excluir status de inscrição')) {
+            return;
+        }
 
         // Verifica na base de dados (incluindo a lixeira com withTrashed)
         $emUso = Inscricao::withTrashed()->where('status_inscricao_id', $id)->exists();

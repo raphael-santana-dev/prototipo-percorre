@@ -18,12 +18,13 @@ use App\Modules\Unidade\Domain\Models\Unidade;
 use App\Modules\Turno\Domain\Models\Turno;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Renderless;
+use App\Traits\ValidaAcesso;
 
 #[Layout('components.layouts.app')]
 #[Title('Fluxo de Inscrição')]
 class KanbanBoard extends Component
 {
-    use \App\Traits\ComFiltroAvancado;
+    use \App\Traits\ComFiltroAvancado, ValidaAcesso;
 
     public $cicloId = '';
     public array $selecionados = []; 
@@ -50,6 +51,10 @@ class KanbanBoard extends Component
 
     public function abrirModalLaudoPcd(int $inscricaoId): void
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.visualizar_laudo', 'visualizar laudo médico PcD')) {
+            return;
+        }
+
         $insc = Inscricao::apenasVinculosPermitidos()->findOrFail($inscricaoId);
         $dinamicos = is_string($insc->dados_dinamicos)
             ? (json_decode($insc->dados_dinamicos, true) ?: [])
@@ -84,8 +89,7 @@ class KanbanBoard extends Component
 
     public function mount($id = null)
     {
-        //abort_if(!feature('crm.acessar'), 403, 'CRM Desativado.');
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('crm.acessar'), 403, 'Acesso restrito.');
+        $this->autorizarTela('inscricao.inscritos.listar', 'fluxo de inscrições (CRM)');
         
         $paramId = $id ?: request()->query('ciclo_id') ?: request()->query('id');
         $cicloPadrao = $this->obterCicloPadrao($paramId ? (int)$paramId : null);
@@ -300,6 +304,10 @@ class KanbanBoard extends Component
 
     public function selecionarTop($quantidade)
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.selecionar', 'selecionar inscrições no fluxo')) {
+            return;
+        }
+
         $query = $this->buildBaseQuery();
         
         $ids = $query->orderByRaw('posicao_ranking_geral ASC NULLS LAST')
@@ -321,7 +329,9 @@ class KanbanBoard extends Component
     #[On('atualizar-status-crm')]
     public function atualizarStatus($id, $statusId)
     {
-        //abort_if(!feature('inscricao.editar'), 403);
+        if (!$this->autorizarAcao('inscricao.inscritos.status', 'alterar status da inscrição no fluxo')) {
+            return;
+        }
 
         $inscricao = Inscricao::apenasVinculosPermitidos()
             ->with(['curso', 'ciclo.statusPipeline'])
@@ -436,6 +446,10 @@ class KanbanBoard extends Component
     #[On('quick-change-status-crm')]
     public function quickChangeStatus($id, $status)
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.status', 'alterar status da inscrição')) {
+            return;
+        }
+
         $inscricao = Inscricao::apenasVinculosPermitidos()
             ->with(['curso', 'ciclo.statusPipeline'])
             ->find($id);
@@ -469,7 +483,9 @@ class KanbanBoard extends Component
 
     public function moverLote()
     {
-        //abort_if(!feature('inscricao.editar'), 403);
+        if (!$this->autorizarAcao('inscricao.inscritos.status', 'mover inscrições em lote')) {
+            return;
+        }
         $this->validate([
             'selecionados' => 'required|array|min:1', 
             'statusDestinoLote' => 'required|exists:status_inscricoes,id'
@@ -511,6 +527,10 @@ class KanbanBoard extends Component
     #[Renderless]
     public function abrirRegras(int $id)
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.visualizar', 'visualizar mapa de regras da inscrição')) {
+            return;
+        }
+
         $inscricao = Inscricao::apenasVinculosPermitidos()->with('ciclo')->find($id);
         if (!$inscricao || !$inscricao->ciclo) return;
 
@@ -630,6 +650,10 @@ class KanbanBoard extends Component
     #[Renderless]
     public function showContactInfo(int $id)
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.visualizar', 'visualizar contatos do candidato')) {
+            return;
+        }
+
         $inscricao = Inscricao::apenasVinculosPermitidos()->findOrFail($id);
 
         $email   = e($inscricao->email ?: 'Não informado');
@@ -668,20 +692,32 @@ class KanbanBoard extends Component
     #[Renderless]
     public function showQuickView(int $id)
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.visualizar', 'visualizar ficha rápida da inscrição')) {
+            return;
+        }
+
         $inscricao = Inscricao::apenasVinculosPermitidos()
             ->with(['curso', 'unidade', 'turno', 'statusInscricao'])
             ->findOrFail($id);
 
-        $statusDisponiveis = StatusInscricao::orderBy('nome')->get();
+        $u = auth()->user();
+        $isDev = $u->hasRole('dev');
+        $podeStatus = feature('inscricao.inscritos.status') && ($isDev || $u->can('inscricao.inscritos.status'));
+        $podeDetalhar = feature('inscricao.inscritos.detalhar') && ($isDev || $u->can('inscricao.inscritos.detalhar'));
 
-        $botoesAcao = '<div class="flex flex-wrap gap-2 mt-2">';
-        foreach ($statusDisponiveis as $st) {
-            $corClass = $st->id == $inscricao->status_inscricao_id
-                ? 'bg-purpura-500 text-white border-purpura-500'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700';
-            $botoesAcao .= '<button type="button" @click="$dispatch(\'quick-change-status-crm\', { id: '.(int) $inscricao->id.', status: '.(int) $st->id.' })" class="px-3 py-1.5 text-[11px] uppercase font-bold border rounded shadow-sm transition-colors '.$corClass.'">'.e($st->nome).'</button>';
+        if ($podeStatus && !$inscricao->legado) {
+            $statusDisponiveis = StatusInscricao::orderBy('nome')->get();
+            $botoesAcao = '<div class="flex flex-wrap gap-2 mt-2">';
+            foreach ($statusDisponiveis as $st) {
+                $corClass = $st->id == $inscricao->status_inscricao_id
+                    ? 'bg-purpura-500 text-white border-purpura-500'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700';
+                $botoesAcao .= '<button type="button" @click="$dispatch(\'quick-change-status-crm\', { id: '.(int) $inscricao->id.', status: '.(int) $st->id.' })" class="px-3 py-1.5 text-[11px] uppercase font-bold border rounded shadow-sm transition-colors '.$corClass.'">'.e($st->nome).'</button>';
+            }
+            $botoesAcao .= '</div>';
+        } else {
+            $botoesAcao = '<span class="inline-block px-2.5 py-1 text-[11px] uppercase font-bold rounded border bg-gray-100 text-gray-700 border-gray-200">'.e($inscricao->statusInscricao->nome ?? 'Pendente').'</span>';
         }
-        $botoesAcao .= '</div>';
 
         $renderValor = function ($v) {
             if (is_string($v) && (str_starts_with($v, 'inscricoes/') || str_starts_with($v, 'formularios/') || str_starts_with($v, 'pre_inscricoes/') || preg_match('/\.(pdf|jpg|jpeg|png|webp|mp4|mov|docx?|xlsx?)$/i', $v))) {
@@ -717,10 +753,13 @@ class KanbanBoard extends Component
 
         $acoes = '<div class="flex flex-col gap-2 mt-2">'
             .'<button type="button" @click="$dispatch(\'open-regras-crm\', { id: '.(int) $inscricao->id.' })" class="w-full text-left text-[11px] font-bold text-purpura-600 hover:text-purpura-800 bg-purpura-50 hover:bg-purpura-100 border border-purpura-200 px-3 py-2 rounded transition-colors uppercase tracking-wider inline-flex items-center gap-1.5 shadow-sm">'
-            .'<i class="ph-bold ph-list-numbers text-sm"></i> Visualizar Acertos (Mapa de Regras)</button>'
-            .'<a href="'.e(route('inscricoes.show', $inscricao->id)).'" target="_blank" rel="noopener" class="w-full text-left text-[11px] font-bold text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 rounded transition-colors uppercase tracking-wider inline-flex items-center gap-1.5 shadow-sm">'
-            .'<i class="ph-bold ph-arrow-square-out text-sm"></i> Ficha Completa &amp; Auditoria</a>'
-            .'</div>';
+            .'<i class="ph-bold ph-list-numbers text-sm"></i> Visualizar Acertos (Mapa de Regras)</button>';
+
+        if ($podeDetalhar) {
+            $acoes .= '<a href="'.e(route('inscricoes.show', $inscricao->id)).'" target="_blank" rel="noopener" class="w-full text-left text-[11px] font-bold text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 rounded transition-colors uppercase tracking-wider inline-flex items-center gap-1.5 shadow-sm">'
+                .'<i class="ph-bold ph-arrow-square-out text-sm"></i> Ficha Completa &amp; Auditoria</a>';
+        }
+        $acoes .= '</div>';
 
         $this->dispatch('load-quick-view', [
             'title' => $inscricao->nome,

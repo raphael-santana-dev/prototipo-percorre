@@ -1,3 +1,10 @@
+@php
+    $u = auth()->user();
+    $isDev = $u?->hasRole('dev') ?? false;
+    $pode = fn(string $chave) => feature($chave) && ($isDev || ($u && $u->can($chave)));
+    $podeMoverKanban = $pode('inscricao.inscritos.status');
+@endphp
+
 <div class="font-sans flex flex-col transition-all duration-300 w-full overflow-hidden relative"
      x-data="{ modoExpandido: false, navbarOculta: false }"
      x-init="
@@ -136,7 +143,7 @@
                     </div>
                 </div>
 
-                @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+                @if($pode('inscricao.inscritos.selecionar'))
                     <div class="flex flex-wrap items-center gap-3 text-sm mt-2 xl:mt-0 w-full xl:w-auto justify-start xl:justify-end shrink-0">
                         <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest hidden sm:inline-block">Seleção Rápida:</span>
                         <button wire:click="selecionarTop(10)" class="text-purpura-600 font-bold hover:underline">Top 10</button> &middot;
@@ -148,7 +155,7 @@
         </div>
 
         {{-- BARRA ESCURA DE AÇÕES EM LOTE --}}
-        @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+        @if($pode('inscricao.inscritos.selecionar') && $podeMoverKanban)
             <div x-data="{ count: @entangle('selecionados').live }" x-show="count.length > 0" x-cloak 
                  class="bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 p-3 rounded-lg flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm w-full transition-all">
                 
@@ -187,6 +194,7 @@
                          }
                          el._sortable = new Sortable(el, {
                              group: 'crm-pipeline', 
+                             disabled: {{ $podeMoverKanban ? 'false' : 'true' }},
                              animation: 150,
                              ghostClass: 'opacity-50',
                              onEnd: (evt) => {
@@ -227,11 +235,13 @@
                                 @if(isset($inscricoesGrupadas[$coluna->id]))
                                     @foreach($inscricoesGrupadas[$coluna->id] as $inscricao)
                                         
-                                        <div wire:key="card-{{ $inscricao->id }}" class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 cursor-grab active:cursor-grabbing hover:border-purpura-400 dark:hover:border-purpura-500 hover:shadow-md transition group relative flex flex-col gap-2" data-id="{{ $inscricao->id }}">
+                                        <div wire:key="card-{{ $inscricao->id }}" class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 {{ $podeMoverKanban ? 'cursor-grab active:cursor-grabbing' : 'cursor-default' }} hover:border-purpura-400 dark:hover:border-purpura-500 hover:shadow-md transition group relative flex flex-col gap-2" data-id="{{ $inscricao->id }}">
                                             
                                             <div class="flex justify-between items-start gap-1">
                                                 <div class="flex items-center gap-2">
-                                                    <input type="checkbox" wire:model.live="selecionados" value="{{ $inscricao->id }}" class="rounded text-purpura-600 border-gray-300 w-4 h-4 cursor-pointer" onmousedown="event.stopPropagation()">
+                                                    @if($pode('inscricao.inscritos.selecionar'))
+                                                        <input type="checkbox" wire:model.live="selecionados" value="{{ $inscricao->id }}" class="rounded text-purpura-600 border-gray-300 w-4 h-4 cursor-pointer" onmousedown="event.stopPropagation()">
+                                                    @endif
                                                     <span class="text-[10px] font-bold text-gray-400 font-mono">#{{ str_pad($inscricao->id, 4, '0', STR_PAD_LEFT) }}</span>
                                                 </div>
                                                 
@@ -242,7 +252,7 @@
                                                         $temLaudoKanban = !empty($dinKanban['laudo_pcd']);
                                                     @endphp
                                                     @if($isPcdKanban)
-                                                        @if($temLaudoKanban)
+                                                        @if($temLaudoKanban && $pode('inscricao.inscritos.visualizar_laudo'))
                                                             <button type="button"
                                                                     wire:click.stop="abrirModalLaudoPcd({{ $inscricao->id }})"
                                                                     class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-300 hover:bg-indigo-100 hover:border-indigo-400 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700 transition cursor-pointer shadow-2xs"
@@ -253,7 +263,7 @@
                                                             </button>
                                                         @else
                                                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800"
-                                                                  title="PcD: {{ $inscricao->natureza_deficiencia ?: 'Deficiência declarada' }} (Sem laudo anexado)">
+                                                                  title="PcD: {{ $inscricao->natureza_deficiencia ?: 'Deficiência declarada' }}">
                                                                 <i class="ph-fill ph-wheelchair"></i> PcD
                                                             </span>
                                                         @endif
@@ -303,18 +313,22 @@
                                                 </span>
                                                 
                                                 <div class="flex items-center gap-0.5">
-                                                    <button type="button" @click="$dispatch('open-quick-view-drawer'); $wire.showContactInfo({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ver Contatos e Endereço">
-                                                        <i class="ph-bold ph-address-book text-[16px]"></i>
-                                                    </button>
-                                                    <button type="button" @click="$dispatch('open-regras-crm', { id: {{ $inscricao->id }} })" class="p-1.5 text-gray-400 hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ver Acertos e Pontos">
-                                                        <i class="ph-bold ph-list-numbers text-[16px]"></i>
-                                                    </button>
-                                                    <button type="button" @click="$dispatch('open-quick-view-drawer'); $wire.showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ações Rápidas">
-                                                        <i class="ph-bold ph-eye text-[16px]"></i>
-                                                    </button>
-                                                    <a href="{{ route('inscricoes.show', $inscricao->id) }}" target="_blank" class="p-1.5 text-gray-400 hover:text-pistache-600 hover:bg-pistache-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ficha Completa da Inscrição">
-                                                        <i class="ph-bold ph-arrow-square-out text-[16px]"></i>
-                                                    </a>
+                                                    @if($pode('inscricao.inscritos.visualizar'))
+                                                        <button type="button" @click="$dispatch('open-quick-view-drawer'); $wire.showContactInfo({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ver Contatos e Endereço">
+                                                            <i class="ph-bold ph-address-book text-[16px]"></i>
+                                                        </button>
+                                                        <button type="button" @click="$dispatch('open-regras-crm', { id: {{ $inscricao->id }} })" class="p-1.5 text-gray-400 hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ver Acertos e Pontos">
+                                                            <i class="ph-bold ph-list-numbers text-[16px]"></i>
+                                                        </button>
+                                                        <button type="button" @click="$dispatch('open-quick-view-drawer'); $wire.showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ações Rápidas">
+                                                            <i class="ph-bold ph-eye text-[16px]"></i>
+                                                        </button>
+                                                    @endif
+                                                    @if($pode('inscricao.inscritos.detalhar'))
+                                                        <a href="{{ route('inscricoes.show', $inscricao->id) }}" target="_blank" class="p-1.5 text-gray-400 hover:text-pistache-600 hover:bg-pistache-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ficha Completa da Inscrição">
+                                                            <i class="ph-bold ph-arrow-square-out text-[16px]"></i>
+                                                        </a>
+                                                    @endif
                                                 </div>
                                             </div>
                                         </div>

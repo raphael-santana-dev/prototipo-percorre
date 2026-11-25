@@ -1,3 +1,9 @@
+@php
+    $u = auth()->user();
+    $isDev = $u?->hasRole('dev') ?? false;
+    $pode = fn(string $chave) => feature($chave) && ($isDev || ($u && $u->can($chave)));
+@endphp
+
 <div class="w-full relative">
 
     <x-page-header 
@@ -7,7 +13,7 @@
         badge=""
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
-        @if(feature('status.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('status.criar')))
+        @if($pode('secretaria.status_inscricao.criar'))
             <x-slot name="actions">
                 <button wire:click="openModal" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none">
                     <i class="ph ph-plus"></i> Novo Status
@@ -42,7 +48,7 @@
                 </td>
 
                 <td class="px-4 py-3 whitespace-nowrap">
-                    @if(feature('status.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('status.editar')))
+                    @if($pode('secretaria.status_inscricao.status'))
                         <div class="flex items-center gap-2">
                             <x-toggle :status="$status->visivel_estudante" action="toggleVisibilidade({{ $status->id }})" />
                             <span class="text-[11px] font-medium {{ $status->visivel_estudante ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400' }}">
@@ -70,12 +76,12 @@
                 
                 <td class="px-4 py-3 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
-                        @if(feature('status.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('status.editar')))
+                        @if($pode('secretaria.status_inscricao.editar'))
                             <button wire:click="edit({{ $status->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Editar">
                                 <i class="text-base ph ph-pencil-simple"></i>
                             </button>
                         @endif
-                        @if(feature('status.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('status.excluir')))
+                        @if($pode('secretaria.status_inscricao.excluir'))
                             <button wire:click="delete({{ $status->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-800" title="Excluir" onclick="confirm('Excluir este status?') || event.stopImmediatePropagation()">
                                 <i class="text-base ph ph-trash"></i>
                             </button>
