@@ -1,7 +1,7 @@
 <div class="flex min-h-screen bg-white dark:bg-gray-900 w-full">
     
     <div class="hidden lg:flex lg:w-1/2 relative bg-[#2b0940] items-center justify-center overflow-hidden">
-        <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 mix-blend-screen" style="background-image: url('{{ Vite::asset('resources/images/bg-hero.svg') }}');"></div>
+        <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 mix-blend-screen" style="background-image: url('{{ asset('images/bg-hero.svg') }}');"></div>
         
         <div class="relative z-10 text-white text-center px-12 lg:px-24">
             <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" alt="Instituto Percorre" class="h-16 mx-auto mb-10 filter drop-shadow-lg">
