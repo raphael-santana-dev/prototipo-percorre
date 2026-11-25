@@ -98,6 +98,7 @@ class AutomacaoForm extends Component
         $this->eventosDisponiveis['aprendizagem.nova_avaliacao_aluno'] = 'Aprendizagem: Nova Avaliação (Notificar Aluno)';
         $this->eventosDisponiveis['aprendizagem.nova_avaliacao_empresa']= 'Aprendizagem: Nova Avaliação (Notificar Empresa/Gestor)';
         $this->eventosDisponiveis['solicitacao.alteracao_academica']   = 'Solicitações: Resposta de Alteração Acadêmica';
+        $this->eventosDisponiveis['usuario.primeiro_acesso']   = 'Criação de usuário: Primeiro Acesso (Senha Provisória)';
 
         $this->eventosDisponiveis = array_merge(
             $this->eventosDisponiveis,

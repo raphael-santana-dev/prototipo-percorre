@@ -100,6 +100,16 @@
                             </a>
                         @endif
                         @if(feature('usuario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('usuario.editar')))
+                            @if(!$user->hasRole('dev') || auth()->user()->hasRole('dev'))
+                                <button type="button"
+                                        wire:click="reenviarEmailPrimeiroAcesso({{ $user->id }})"
+                                        wire:confirm="Gerar uma nova senha provisória e reenviar o e-mail de primeiro acesso para {{ $user->email }}?"
+                                        wire:loading.attr="disabled"
+                                        class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-gray-600"
+                                        title="Reenviar E-mail de Primeiro Acesso">
+                                    <i class="text-lg ph ph-paper-plane-tilt"></i>
+                                </button>
+                            @endif
                             <button wire:click="edit({{ $user->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Usuário (Wizard)">
                                 <i class="text-lg ph ph-pencil-simple"></i>
                             </button>
@@ -141,11 +151,22 @@
                         </span>
                         
                         <div class="flex items-center gap-1">
-                            <button wire:click="showQuickDetails({{ $user->id }})" class="p-1.5 text-gray-400 hover:text-purpura-500 rounded-lg"><i class="text-base ph ph-info"></i></button>
-                            <a href="{{ route('users.show', $user->id) }}" class="p-1.5 text-gray-400 hover:text-ponkan-500 rounded-lg"><i class="text-base ph ph-eye"></i></a>
-                            <button wire:click="edit({{ $user->id }})" class="p-1.5 text-gray-400 hover:text-blue-500 rounded-lg"><i class="text-base ph ph-pencil-simple"></i></button>
+                            <button wire:click="showQuickDetails({{ $user->id }})" class="p-1.5 text-gray-400 hover:text-purpura-500 rounded-lg" title="Ficha Rápida"><i class="text-base ph ph-info"></i></button>
+                            <a href="{{ route('users.show', $user->id) }}" class="p-1.5 text-gray-400 hover:text-ponkan-500 rounded-lg" title="Visualizar Perfil"><i class="text-base ph ph-eye"></i></a>
+                            @if(feature('usuario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('usuario.editar')))
+                                @if(!$user->hasRole('dev') || auth()->user()->hasRole('dev'))
+                                    <button type="button"
+                                            wire:click="reenviarEmailPrimeiroAcesso({{ $user->id }})"
+                                            wire:confirm="Gerar uma nova senha provisória e reenviar o e-mail de primeiro acesso para {{ $user->email }}?"
+                                            class="p-1.5 text-gray-400 hover:text-emerald-600 rounded-lg"
+                                            title="Reenviar E-mail de Primeiro Acesso">
+                                        <i class="text-base ph ph-paper-plane-tilt"></i>
+                                    </button>
+                                @endif
+                                <button wire:click="edit({{ $user->id }})" class="p-1.5 text-gray-400 hover:text-blue-500 rounded-lg" title="Editar Usuário"><i class="text-base ph ph-pencil-simple"></i></button>
+                            @endif
                             @if($user->id !== auth()->id() && !$user->hasRole('dev'))
-                                <button wire:click="delete({{ $user->id }})" class="p-1.5 text-gray-400 hover:text-red-500 rounded-lg" onclick="confirm('Excluir este usuário?') || event.stopImmediatePropagation()"><i class="text-base ph ph-trash"></i></button>
+                                <button wire:click="delete({{ $user->id }})" class="p-1.5 text-gray-400 hover:text-red-500 rounded-lg" title="Excluir Usuário" onclick="confirm('Excluir este usuário?') || event.stopImmediatePropagation()"><i class="text-base ph ph-trash"></i></button>
                             @endif
                         </div>
                     </div>

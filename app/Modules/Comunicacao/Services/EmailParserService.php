@@ -26,10 +26,16 @@ class EmailParserService
                 '{{link_matricula}}'   => 'Botão/Link seguro para o Portal de Matrícula',
                 '{{link_retomada}}'    => 'Botão/Link para o candidato concluir a Inscrição',
                 '{{link_assinatura}}'  => 'Botão/Link direto para a assinatura do contrato',
-                '{{link_login}}'       => 'Botão/Link para a tela de login do Portal do Aluno',
-                '{{senha_provisoria}}' => 'Senha de acesso gerada automaticamente',
+                '{{link_login}}'       => 'Botão/Link para a tela de login do Sistema / Portal do Aluno',
+                '{{senha_provisoria}}' => 'Senha provisória gerada automaticamente',
             ],
-            'Central de Solicitações (Helpdesk)' => [
+            'Acesso de Usuários' => [
+                '{{email_acesso}}'     => 'E-mail de login do usuário ou estudante cadastrado',
+                '{{grupo}}'            => 'Perfil / Grupo de acesso (Role) vinculado ao usuário',
+                '{{senha_provisoria}}' => 'Senha provisória gerada no cadastro ou reenvio',
+                '{{link_login}}'       => 'Link direto para a tela de login do sistema',
+            ],
+            'Central de Solicitações' => [
                 '{{nome_solicitante}}' => 'Nome do usuário que solicitou a ação',
                 '{{justificativa}}'    => 'Texto de justificativa inserido pelo usuário',
                 '{{link_painel}}'      => 'Botão/Link de acesso ao painel administrativo',
@@ -90,9 +96,11 @@ class EmailParserService
                 'link_matricula_url' => 'URL Direta do Portal de Matrícula (Texto p/ WhatsApp)',
                 'link_retomada_url'  => 'URL Direta de Retomada da Inscrição (Texto p/ WhatsApp)',
                 'link_assinatura'    => 'URL Direta de Assinatura de Contrato',
-                'link_login'         => 'URL de Login do Portal do Aluno',
+                'link_login'         => 'URL de Login do Sistema / Portal do Aluno',
                 'link_painel'        => 'URL da Central de Solicitações (/solicitacoes)',
-                'senha_provisoria'   => 'Senha Provisória Gerada (Student)',
+                'email_acesso'       => 'E-mail de Acesso (Usuário / Estudante)',
+                'grupo'              => 'Grupo / Perfil de Acesso (Role do Usuário)',
+                'senha_provisoria'   => 'Senha Provisória Gerada (Usuário / Estudante)',
             ],
         ];
 
@@ -396,10 +404,17 @@ class EmailParserService
         $partesNome   = explode(' ', $nomeCompleto);
         $primeiroNome = $partesNome[0] ?? 'Candidato';
 
+        $emailFallback = $dadosExtras['email_acesso']
+            ?? $dadosExtras['email']
+            ?? ($inscricao->email ?? '');
+
         $tags = [
             'nome'             => $nomeCompleto,
             'primeiro_nome'    => $primeiroNome,
             'cpf'              => $inscricao ? $inscricao->cpf : '',
+            'email'            => $emailFallback,
+            'email_acesso'     => $emailFallback,
+            'grupo'            => $dadosExtras['grupo'] ?? 'Usuário',
             'curso'            => ($inscricao && $inscricao->curso) ? $inscricao->curso->nome : 'Sem Curso Vinculado',
             'unidade'          => ($inscricao && $inscricao->unidade) ? $inscricao->unidade->nome : 'Unidade não definida',
             'turno'            => ($inscricao && $inscricao->turno) ? $inscricao->turno->nome : 'Turno não definido',

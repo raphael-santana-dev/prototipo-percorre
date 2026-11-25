@@ -9,6 +9,8 @@ use Livewire\WithPagination;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\Curso;
@@ -362,6 +364,9 @@ class UserManager extends Component
         $this->validarEtapa1();
         $this->validarEtapa2();
 
+        $isNovoUsuario = !$this->isEditMode;
+        $senhaPlana = $this->password;
+
         $data = [
             'name'            => $this->name,
             'email'           => strtolower(trim($this->email)),
@@ -386,6 +391,9 @@ class UserManager extends Component
             }
             $user->update($data);
         } else {
+            if (Schema::hasColumn('users', 'must_change_password')) {
+                $data['must_change_password'] = true;
+            }
             $user = User::create($data);
         }
 
@@ -523,9 +531,17 @@ class UserManager extends Component
         $user->permissions()->sync($syncDirectPermissions);
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
+        $mensagem = 'Usuário, vínculos e permissões salvos com sucesso!';
+        if ($isNovoUsuario) {
+            $enviou = $this->dispararEmailPrimeiroAcesso($user, $senhaPlana, false);
+            $mensagem = $enviou
+                ? 'Usuário cadastrado e e-mail de primeiro acesso enviado com sucesso!'
+                : 'Usuário cadastrado, mas houve uma falha ao disparar o e-mail de primeiro acesso.';
+        }
+
         $this->showModal = false;
         $this->resetInputFields();
-        $this->dispatch('sucesso', msg: 'Usuário, vínculos e permissões salvos com sucesso!');
+        $this->dispatch('sucesso', msg: $mensagem);
     }
 
     public function edit(int $id)
@@ -650,6 +666,144 @@ class UserManager extends Component
         $user->delete();
         $this->resetInputFields();
         $this->dispatch('sucesso', msg: 'Usuário excluído com sucesso!');
+    }
+
+    public function reenviarEmailPrimeiroAcesso(int $id): void
+    {
+        if (!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.editar')) {
+            $this->dispatch('erro', msg: 'Você não tem permissão para reenviar o e-mail de primeiro acesso.');
+            return;
+        }
+
+        $user = User::with('roles')->findOrFail($id);
+
+        if ($user->hasRole('dev') && !auth()->user()->hasRole('dev')) {
+            $this->dispatch('erro', msg: 'Você não tem privilégios para reenviar credenciais de um usuário DEV.');
+            return;
+        }
+
+        $senhaProvisoria = Str::password(10, letters: true, numbers: true, symbols: false);
+
+        $updateData = ['password' => Hash::make($senhaProvisoria)];
+        if (Schema::hasColumn('users', 'must_change_password')) {
+            $updateData['must_change_password'] = true;
+        }
+        $user->update($updateData);
+
+        $enviou = $this->dispararEmailPrimeiroAcesso($user, $senhaProvisoria, true);
+
+        if ($enviou) {
+            $this->dispatch('sucesso', msg: "E-mail de primeiro acesso reenviado para {$user->email}!");
+        } else {
+            $this->dispatch('erro', msg: "Não foi possível enviar o e-mail para {$user->email}. Verifique as configurações de envio.");
+        }
+    }
+
+    private function dispararEmailPrimeiroAcesso(User $user, string $senhaProvisoria, bool $forcarReenvio = false): bool
+    {
+        $user->loadMissing('roles');
+
+        $dadosExtras = [
+            'nome'             => $user->name,
+            'primeiro_nome'    => explode(' ', trim((string) $user->name))[0],
+            'email'            => $user->email,
+            'email_acesso'     => $user->email,
+            'senha_provisoria' => $senhaProvisoria,
+            'grupo'            => strtoupper($user->roles->first()?->name ?? 'Usuário'),
+            'link_login'       => route('login'),
+        ];
+
+        try {
+            $gatilhoAtivo = null;
+            if (class_exists(\App\Modules\Comunicacao\Domain\Models\Automacao::class)) {
+                $gatilhoAtivo = \App\Modules\Comunicacao\Domain\Models\Automacao::whereIn('evento_gatilho', [
+                        'usuario.primeiro_acesso',
+                        'usuario.criado',
+                    ])
+                    ->where('status', true)
+                    ->value('evento_gatilho');
+            }
+
+            if ($gatilhoAtivo && class_exists(\App\Modules\Comunicacao\Services\AutomacaoService::class)) {
+                \App\Modules\Comunicacao\Services\AutomacaoService::disparar(
+                    $gatilhoAtivo,
+                    $user->email,
+                    $dadosExtras,
+                    $forcarReenvio
+                );
+                return true;
+            }
+
+            $assunto   = 'Seus dados de primeiro acesso ao sistema';
+            $corpoHtml = $this->montarHtmlPadraoPrimeiroAcesso($dadosExtras);
+
+            // Ajuste o nome da view abaixo para o caminho exato do layout em resources/views/
+            $viewLayout = 'emails.padrao';
+
+            $headerImageUrl = null;
+            if (class_exists(\App\Models\ConfiguracaoGeral::class)) {
+                $logoCfg = \App\Models\ConfiguracaoGeral::whereIn('chave', ['email_header_image', 'logo_email', 'logo_sistema'])
+                    ->whereNotNull('valor')
+                    ->value('valor');
+
+                if (!empty($logoCfg)) {
+                    $headerImageUrl = str_starts_with($logoCfg, 'http')
+                        ? $logoCfg
+                        : asset(ltrim($logoCfg, '/'));
+                }
+            }
+
+            Mail::send($viewLayout, [
+                'assunto'         => $assunto,
+                'corpoHtml'       => $corpoHtml,
+                'headerImageUrl'  => $headerImageUrl,
+                'assinaturaNome'  => 'Equipe Instituto Percorre',
+                'assinaturaCargo' => 'Administração do Sistema',
+                'pixelUrl'        => null,
+            ], function ($message) use ($user, $assunto) {
+                $message->to($user->email, $user->name)
+                    ->subject($assunto);
+            });
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error("Falha ao enviar e-mail de primeiro acesso para {$user->email}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    private function montarHtmlPadraoPrimeiroAcesso(array $dados): string
+    {
+        $nome  = e($dados['nome'] ?? '');
+        $email = e($dados['email_acesso'] ?? '');
+        $senha = e($dados['senha_provisoria'] ?? '');
+        $grupo = e($dados['grupo'] ?? '');
+        $link  = e($dados['link_login'] ?? url('/login'));
+
+        return <<<HTML
+            <p style="margin: 0 0 14px 0; font-size: 16px; font-weight: 700; color: #111827;">
+                Olá, {$nome}!
+            </p>
+            <p style="margin: 0 0 18px 0;">
+                Seu acesso ao sistema administrativo foi liberado com o perfil <strong>{$grupo}</strong>. Utilize as credenciais abaixo para realizar o seu primeiro login:
+            </p>
+            <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 22px;">
+                <tr>
+                    <td style="padding: 16px 18px; font-size: 14px; line-height: 1.6; color: #374151;">
+                        <p style="margin: 0 0 6px 0;"><strong>E-mail de acesso:</strong> {$email}</p>
+                        <p style="margin: 0;"><strong>Senha provisória:</strong> <code style="background-color: #f3e8ff; color: #461a63; padding: 2px 8px; border-radius: 4px; font-weight: 700;">{$senha}</code></p>
+                    </td>
+                </tr>
+            </table>
+            <p style="margin: 0 0 22px 0;">
+                <a href="{$link}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #461a63; color: #ffffff; text-decoration: none; padding: 11px 22px; border-radius: 6px; font-size: 14px; font-weight: 600;">
+                    Acessar o Sistema
+                </a>
+            </p>
+            <p style="margin: 0; font-size: 12px; color: #6b7280;">
+                Por segurança, você será orientado a definir uma nova senha pessoal após o primeiro acesso.
+            </p>
+        HTML;
     }
 
     private function resetInputFields()
