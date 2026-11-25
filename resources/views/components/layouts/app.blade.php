@@ -52,167 +52,115 @@
         $u = auth()->user();
         $isDev = $u?->hasRole('dev') ?? false;
         $can = fn(string $perm) => $isDev || ($u && $u->can($perm));
-        $canAny = fn(array $perms) => $isDev || ($u && $u->canAny($perms));
+        $pode = fn(string $chave) => feature($chave) && $can($chave);
+        $podeAny = fn(array $chaves) => collect($chaves)->contains(fn($c) => $pode($c));
 
         $menuGrupos = [
             [
-                'titulo' => 'Financeiro',
-                'icone'  => 'ph-receipt',
-                'visivel' => $canAny([
-                    'financeiro.orcamentos.listar',
-                    'financeiro.orcamentos.aprovar',
-                    'financeiro.centro_custo.listar',
-                    'financeiro.natureza.listar',
-                    'financeiro.visao_global',
-                    'financeiro.visao_global.aprovacao',
-                ]),
-                'itens' => [
-                    ['label' => 'Orçamentos', 'route' => 'financeiro.orcamentos', 'visivel' => $canAny(['financeiro.orcamentos.listar', 'financeiro.visao_global'])],
-                    ['label' => 'Aprovações', 'route' => 'financeiro.aprovacoes', 'visivel' => $canAny(['financeiro.orcamentos.aprovar', 'financeiro.visao_global.aprovacao'])],
-                    ['label' => 'Centros de Custo', 'route' => 'financeiro.centro_custo', 'visivel' => $can('financeiro.centro_custo.listar')],
-                    ['label' => 'Naturezas', 'route' => 'financeiro.naturezas', 'visivel' => $can('financeiro.natureza.listar')],
+                'titulo'  => 'Financeiro',
+                'icone'   => 'ph-receipt',
+                'visivel' => true,
+                'itens'   => [
+                    ['label' => 'Orçamentos', 'route' => 'financeiro.orcamentos', 'visivel' => $pode('financeiro.orcamento.listar')],
+                    ['label' => 'Aprovações', 'route' => 'financeiro.aprovacoes', 'visivel' => $pode('financeiro.orcamento.aprovar')],
+                    ['label' => 'Centros de Custo', 'route' => 'financeiro.centro_custo', 'visivel' => $pode('financeiro.centro_custo.listar')],
+                    ['label' => 'Naturezas', 'route' => 'financeiro.naturezas', 'visivel' => $pode('financeiro.natureza.listar')],
                 ],
             ],
             [
-                'titulo' => 'Processos Seletivos',
-                'icone'  => 'ph-calendar-check',
-                'visivel' => $canAny([
-                    'ciclo.listar',
-                    'inscricao.listar',
-                    'inscricao.crm.acessar',
-                    'matricula.acompanhamento.listar',
-                    'matricula.ia.configurar',
-                ]),
-                'itens' => [
-                    ['label' => 'Ciclos de Inscrição', 'route' => 'ciclos.index', 'visivel' => $can('ciclo.listar')],
-                    ['label' => 'Inscrições', 'route' => 'inscricoes.index', 'visivel' => $can('inscricao.listar')],
-                    ['label' => 'Kanban (CRM)', 'route' => 'ciclos.crm', 'visivel' => $can('inscricao.crm.acessar')],
-                    ['label' => 'Acompanhamento (Portal IA)', 'route' => 'matriculas.acompanhamento', 'visivel' => $can('matricula.acompanhamento.listar')],
-                    ['label' => 'Configuração IA Matrículas', 'route' => 'matriculas.configuracao', 'visivel' => $can('matricula.ia.configurar')],
+                'titulo'  => 'Processos Seletivos',
+                'icone'   => 'ph-calendar-check',
+                'visivel' => true,
+                'itens'   => [
+                    ['label' => 'Ciclos de Inscrição', 'route' => 'ciclos.index', 'visivel' => $pode('inscricao.ciclo.listar')],
+                    ['label' => 'Inscrições', 'route' => 'inscricoes.index', 'visivel' => $pode('inscricao.inscritos.listar')],
+                    ['label' => 'Kanban (CRM)', 'route' => 'ciclos.crm', 'visivel' => $pode('inscricao.inscritos.listar')],
+                    ['label' => 'Acompanhamento (Portal IA)', 'route' => 'matriculas.acompanhamento', 'visivel' => $pode('inscricao.inscritos.validar_docs')],
+                    ['label' => 'Configuração IA Matrículas', 'route' => 'matriculas.configuracao', 'visivel' => $pode('ia.configuracao')],
                 ],
             ],
             [
-                'titulo' => 'Secretaria',
-                'icone'  => 'ph-folder-user',
-                'visivel' => $canAny([
-                    'estudante.listar',
-                    'solicitacao.listar',
-                    'status.listar',
-                    'empresas.listar',
-                ]),
-                'itens' => [
-                    ['label' => 'Base de Alunos', 'route' => 'students.index', 'visivel' => $can('estudante.listar')],
-                    ['label' => 'Solicitações', 'route' => 'solicitacoes.index', 'visivel' => $can('solicitacao.listar')],
-                    ['label' => 'Tags de Status', 'route' => 'status-inscricoes.index', 'visivel' => $can('status.listar')],
-                    ['label' => 'Empresas Parceiras', 'route' => 'empresas.index', 'visivel' => feature('empresas.listar') && $can('empresas.listar')],
+                'titulo'  => 'Secretaria',
+                'icone'   => 'ph-folder-user',
+                'visivel' => true,
+                'itens'   => [
+                    ['label' => 'Base de Alunos', 'route' => 'students.index', 'visivel' => $podeAny(['secretaria.alunos.listar', 'secretaria.alunos.visualizar'])],
+                    ['label' => 'Solicitações', 'route' => 'solicitacoes.index', 'visivel' => $pode('secretaria.solicitacoes.listar')],
+                    ['label' => 'Tags de Status', 'route' => 'status-inscricoes.index', 'visivel' => $pode('secretaria.status_inscricao.listar')],
+                    ['label' => 'Empresas Parceiras', 'route' => 'empresas.index', 'visivel' => $pode('empresas.listar')],
                 ],
             ],
             [
-                'titulo' => 'Instituição',
-                'icone'  => 'ph-buildings',
-                'visivel' => $canAny([
-                    'unidade.listar',
-                    'curso.listar',
-                    'turno.listar',
-                    'formulario.listar',
-                    'form.builder',
-                ]),
-                'itens' => [
-                    ['label' => 'Unidades', 'route' => 'unidades.index', 'visivel' => $can('unidade.listar')],
-                    ['label' => 'Cursos', 'route' => 'cursos.index', 'visivel' => $can('curso.listar')],
-                    ['label' => 'Grade de Turnos', 'route' => 'turnos.index', 'visivel' => $can('turno.listar')],
-                    ['separador' => 'Formulários', 'visivel' => $canAny(['formulario.listar', 'form.builder'])],
-                    ['label' => 'Formulários Gerais', 'route' => 'formularios.index', 'visivel' => $can('formulario.listar')],
-                    ['label' => 'Form Builder (Hub)', 'route' => 'formbuilder.hub', 'visivel' => $can('form.builder')],
-                    ['label' => 'Escolas', 'route' => 'escolas.index', 'visivel' => $can('escola.listar')],
+                'titulo'  => 'Instituição',
+                'icone'   => 'ph-buildings',
+                'visivel' => true,
+                'itens'   => [
+                    ['label' => 'Unidades', 'route' => 'unidades.index', 'visivel' => $pode('instituicao.unidades.listar')],
+                    ['label' => 'Cursos', 'route' => 'cursos.index', 'visivel' => $pode('instituicao.cursos.listar')],
+                    ['label' => 'Grade de Turnos', 'route' => 'turnos.index', 'visivel' => $pode('instituicao.turnos.listar')],
+                    ['label' => 'Escolas', 'route' => 'escolas.index', 'visivel' => $pode('instituicao.escolas.listar')],
+                    ['separador' => 'Formulários', 'visivel' => $podeAny(['instituicao.formularios.listar', 'instituicao.formbuilder.acessar'])],
+                    ['label' => 'Formulários Gerais', 'route' => 'formularios.index', 'visivel' => $pode('instituicao.formularios.listar')],
+                    ['label' => 'Form Builder (Hub)', 'route' => 'formbuilder.hub', 'visivel' => $pode('instituicao.formbuilder.acessar')],
                 ],
             ],
             [
-                'titulo' => 'Comunicação',
-                'icone'  => 'ph-paper-plane-tilt',
-                'visivel' => $canAny([
-                    'comunicacao.dashboard.acessar',
-                    'comunicado.listar',
-                    'comunicacao.esteira.listar',
-                    'automacao.listar',
-                    'template.listar',
-                    'email_log.listar',
-                    'comunicacao.suri_monitor.acessar',
-                    'comunicacao.suri_lab.acessar',
-                    'portal.noticias',
-                ]),
-                'itens' => [
-                    ['label' => 'Dashboard Comunicação', 'route' => 'comunicacao.dashboard', 'visivel' => $can('comunicacao.dashboard.acessar')],
-                    ['separador' => 'Mensagens & Automação', 'visivel' => $canAny(['comunicado.listar', 'comunicacao.esteira.listar', 'automacao.listar', 'template.listar', 'email_log.listar'])],
-                    ['label' => 'Comunicados', 'route' => 'comunicados.index', 'visivel' => $can('comunicado.listar')],
-                    ['label' => 'Esteiras de Disparo', 'route' => 'esteiras.index', 'visivel' => $can('comunicacao.esteira.listar')],
-                    ['label' => 'Automações', 'route' => 'automacoes.index', 'visivel' => $can('automacao.listar')],
-                    ['label' => 'Templates', 'route' => 'templates.index', 'visivel' => $can('template.listar')],
-                    ['label' => 'Monitor de E-mails', 'route' => 'monitor.emails', 'visivel' => $can('email_log.listar')],
-                    ['separador' => 'WhatsApp (Suri)', 'visivel' => $canAny(['comunicacao.suri_monitor.acessar', 'comunicacao.suri_lab.acessar'])],
-                    ['label' => 'Monitor Suri Webhook', 'route' => 'monitor.suri', 'visivel' => $can('comunicacao.suri_monitor.acessar')],
-                    ['label' => 'Laboratório Suri', 'route' => 'suri.dashboard', 'visivel' => $can('comunicacao.suri_lab.acessar')],
-                    ['separador' => 'Portal & Notícias', 'visivel' => feature('portal.noticias') && $can('portal.noticias')],
-                    ['label' => 'Gestão de Publicações', 'route' => 'conteudo.index', 'visivel' => feature('portal.noticias') && $can('portal.noticias')],
-                    ['label' => 'Categorias', 'route' => 'conteudo.categorias', 'visivel' => feature('portal.noticias') && $can('portal.noticias')],
-                    ['label' => 'Ver Portal ↗', 'route' => 'portal.index', 'target' => '_blank', 'visivel' => feature('portal.noticias') && $can('portal.noticias')],
+                'titulo'  => 'Comunicação',
+                'icone'   => 'ph-paper-plane-tilt',
+                'visivel' => true,
+                'itens'   => [
+                    ['label' => 'Dashboard Comunicação', 'route' => 'comunicacao.dashboard', 'visivel' => $pode('comunicacao.dashboard.visualizar')],
+                    ['separador' => 'Mensagens & Automação', 'visivel' => $podeAny(['comunicacao.comunicados.listar', 'comunicacao.esteira_disparo.listar', 'comunicacao.automacao.listar', 'comunicacao.templates.listar', 'comunicacao.monitor_emails.listar'])],
+                    ['label' => 'Comunicados', 'route' => 'comunicados.index', 'visivel' => $pode('comunicacao.comunicados.listar')],
+                    ['label' => 'Esteiras de Disparo', 'route' => 'esteiras.index', 'visivel' => $pode('comunicacao.esteira_disparo.listar')],
+                    ['label' => 'Automações', 'route' => 'automacoes.index', 'visivel' => $pode('comunicacao.automacao.listar')],
+                    ['label' => 'Templates', 'route' => 'templates.index', 'visivel' => $pode('comunicacao.templates.listar')],
+                    ['label' => 'Monitor de E-mails', 'route' => 'monitor.emails', 'visivel' => $pode('comunicacao.monitor_emails.listar')],
+                    ['separador' => 'WhatsApp (Suri)', 'visivel' => $podeAny(['comunicacao.webhook_suri.acessar', 'comunicacao.laboratorio_suri.acessar'])],
+                    ['label' => 'Monitor Suri Webhook', 'route' => 'monitor.suri', 'visivel' => $pode('comunicacao.webhook_suri.acessar')],
+                    ['label' => 'Laboratório Suri', 'route' => 'suri.dashboard', 'visivel' => $pode('comunicacao.laboratorio_suri.acessar')],
+                    ['separador' => 'Portal & Notícias', 'visivel' => $pode('portal.noticias')],
+                    ['label' => 'Gestão de Publicações', 'route' => 'conteudo.index', 'visivel' => $pode('portal.noticias')],
+                    ['label' => 'Categorias', 'route' => 'conteudo.categorias', 'visivel' => $pode('portal.noticias')],
+                    ['label' => 'Ver Portal ↗', 'route' => 'portal.index', 'target' => '_blank', 'visivel' => $pode('portal.noticias')],
                 ],
             ],
             [
-                'titulo' => 'Educacional',
-                'icone'  => 'ph-graduation-cap',
-                'visivel' => $canAny([
-                    'matricula.listar',
-                    'turma.listar',
-                    'aprendizagem.listar',
-                    'relatorio.acessar',
-                    'periodo_avaliacao.listar',
-                    'avaliacao.listar',
-                    'ferramenta.mock',
-                ]),
-                'itens' => [
-                    ['separador' => 'Matrículas & Turmas', 'visivel' => $canAny(['matricula.listar', 'turma.listar', 'aprendizagem.listar'])],
-                    ['label' => 'Matrículas', 'route' => 'matriculas.index', 'visivel' => $can('matricula.listar')],
-                    ['label' => 'Turmas', 'route' => 'turmas.index', 'visivel' => $can('turma.listar')],
-                    ['label' => 'Ciclos de Aprendizagem', 'route' => 'aprendizagem.index', 'visivel' => feature('aprendizagem.listar') && $can('aprendizagem.listar')],
-                    ['separador' => 'Avaliações', 'visivel' => $canAny(['relatorio.acessar', 'periodo_avaliacao.listar', 'avaliacao.listar', 'ferramenta.mock'])],
-                    ['label' => 'Relatórios', 'route' => 'avaliacoes.relatorios', 'visivel' => $can('relatorio.acessar')],
-                    ['label' => 'Períodos de Avaliação', 'route' => 'avaliacoes.periodos.index', 'visivel' => $can('periodo_avaliacao.listar')],
-                    ['label' => 'Avaliações', 'route' => 'avaliacoes.index', 'visivel' => $can('avaliacao.listar')],
-                    ['label' => 'Gerador Mock', 'route' => 'avaliacoes.gerador', 'visivel' => $can('ferramenta.mock')],
-                    ['label' => 'Gerador Aprendizagem', 'route' => 'avaliacoes.gerador-aprendizagem', 'visivel' => $can('ferramenta.mock')],
+                'titulo'  => 'Educacional',
+                'icone'   => 'ph-graduation-cap',
+                'visivel' => true,
+                'itens'   => [
+                    ['separador' => 'Matrículas & Turmas', 'visivel' => $podeAny(['educacional.matricula.acessar', 'educacional.turmas.acessar', 'educacional.aprendizagem.acessar'])],
+                    ['label' => 'Matrículas', 'route' => 'matriculas.index', 'visivel' => $pode('educacional.matricula.acessar')],
+                    ['label' => 'Turmas', 'route' => 'turmas.index', 'visivel' => $pode('educacional.turmas.acessar')],
+                    ['label' => 'Ciclos de Aprendizagem', 'route' => 'aprendizagem.index', 'visivel' => $pode('educacional.aprendizagem.acessar')],
+                    ['separador' => 'Avaliações', 'visivel' => $podeAny(['educacional.avaliacoes.acessar', 'educacional.aprendizagem.acessar'])],
+                    ['label' => 'Relatórios', 'route' => 'avaliacoes.relatorios', 'visivel' => $pode('educacional.avaliacoes.acessar')],
+                    ['label' => 'Períodos de Avaliação', 'route' => 'avaliacoes.periodos.index', 'visivel' => $pode('educacional.avaliacoes.acessar')],
+                    ['label' => 'Avaliações', 'route' => 'avaliacoes.index', 'visivel' => $pode('educacional.avaliacoes.acessar')],
+                    ['label' => 'Gerador Mock', 'route' => 'avaliacoes.gerador', 'visivel' => $pode('educacional.avaliacoes.acessar')],
+                    ['label' => 'Gerador Aprendizagem', 'route' => 'avaliacoes.gerador-aprendizagem', 'visivel' => $pode('educacional.aprendizagem.acessar')],
                 ],
             ],
             [
-                'titulo' => 'Administração',
-                'icone'  => 'ph-gear',
+                'titulo'     => 'Administração',
+                'icone'      => 'ph-gear',
                 'alignRight' => true,
-                'visivel' => $canAny([
-                    'configuracoes.editar',
-                    'usuario.listar',
-                    'acl.role.listar',
-                    'acl.permissao.listar',
-                    'feature.listar',
-                    'auditoria.listar',
-                    'tarefas.acessar',
-                    'sistema.erros.listar',
-                    'dev.rd_crm.acessar',
-                    'dev.design_system.acessar',
-                ]),
-                'itens' => [
-                    ['label' => 'Configurações Base', 'route' => 'configuracoes.index', 'visivel' => $can('configuracoes.editar')],
-                    ['label' => 'Gestão de Usuários', 'route' => 'users.index', 'visivel' => $can('usuario.listar')],
-                    ['label' => 'Perfis (Roles)', 'route' => 'roles.index', 'visivel' => $can('acl.role.listar')],
-                    ['label' => 'Permissões', 'route' => 'permissions.index', 'visivel' => $can('acl.permissao.listar')],
-                    ['label' => 'Feature Toggles', 'route' => 'features.index', 'visivel' => $can('feature.listar')],
-                    ['separador' => 'Sistema & Logs', 'visivel' => $canAny(['auditoria.listar', 'tarefas.acessar', 'sistema.erros.listar'])],
-                    ['label' => 'Auditoria Geral', 'route' => 'auditoria.index', 'visivel' => $can('auditoria.listar')],
-                    ['label' => 'Motor de Importações', 'route' => 'system_tasks.index', 'visivel' => $can('tarefas.acessar')],
-                    ['label' => 'Hub de Tarefas', 'route' => 'system_tasks.hub', 'visivel' => $can('tarefas.acessar')],
-                    ['label' => 'Central de Erros', 'route' => 'system.errors.index', 'visivel' => $can('sistema.erros.listar')],
-                    ['separador' => 'Dev / Testes', 'visivel' => $canAny(['dev.rd_crm.acessar', 'dev.design_system.acessar'])],
-                    ['label' => 'Teste RD CRM', 'route' => 'teste.rdcrm', 'visivel' => $can('dev.rd_crm.acessar')],
-                    ['label' => 'Design System', 'route' => 'teste.design', 'visivel' => $can('dev.design_system.acessar')],
+                'visivel'    => true,
+                'itens'      => [
+                    ['label' => 'Configurações Base', 'route' => 'configuracoes.index', 'visivel' => $pode('administracao.configuracao.acessar')],
+                    ['label' => 'Gestão de Usuários', 'route' => 'users.index', 'visivel' => $pode('administracao.usuarios.listar')],
+                    ['label' => 'Perfis (Roles)', 'route' => 'roles.index', 'visivel' => $pode('administracao.perfis.listar')],
+                    ['label' => 'Permissões', 'route' => 'permissions.index', 'visivel' => $pode('administracao.permissoes.listar')],
+                    ['label' => 'Feature Toggles', 'route' => 'features.index', 'visivel' => $pode('administracao.features.listar')],
+                    ['separador' => 'Sistema & Logs', 'visivel' => $podeAny(['administracao.auditoria.listar', 'administracao.hub_integracao.acessar', 'administracao.central_erros.acessar'])],
+                    ['label' => 'Auditoria Geral', 'route' => 'auditoria.index', 'visivel' => $pode('administracao.auditoria.listar')],
+                    ['label' => 'Motor de Importações', 'route' => 'system_tasks.index', 'visivel' => $pode('administracao.hub_integracao.acessar')],
+                    ['label' => 'Hub de Tarefas', 'route' => 'system_tasks.hub', 'visivel' => $pode('administracao.hub_integracao.acessar')],
+                    ['label' => 'Central de Erros', 'route' => 'system.errors.index', 'visivel' => $pode('administracao.central_erros.acessar')],
+                    ['separador' => 'Dev / Testes', 'visivel' => $podeAny(['administracao.teste_crm.acessar', 'administracao.design_systema.acessar'])],
+                    ['label' => 'Teste RD CRM', 'route' => 'teste.rdcrm', 'visivel' => $pode('administracao.teste_crm.acessar')],
+                    ['label' => 'Design System', 'route' => 'teste.design', 'visivel' => $pode('administracao.design_systema.acessar')],
                 ],
             ],
         ];
@@ -223,6 +171,7 @@
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NCLCLKXJ"
         height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <!-- End Google Tag Manager (noscript) -->
+
         <div x-data="{ 
             drawerOpen: false, 
             layoutMode: localStorage.getItem('layoutMode') || 'left',
@@ -231,7 +180,10 @@
             init() {
                 document.documentElement.dataset.layout = this.layoutMode;
                 document.documentElement.dataset.sidebar = this.sidebarMinimized ? 'min' : 'full';
-                setTimeout(() => this.loaded = true, 50);
+                setTimeout(() => {
+                    this.loaded = true;
+                    document.documentElement.classList.add('layout-ready');
+                }, 50);
             },
             toggleLayout() {
                 this.layoutMode = this.layoutMode === 'top' ? 'left' : 'top';
@@ -246,38 +198,54 @@
         }" class="flex h-screen w-full overflow-hidden">
             
             {{-- DESKTOP: SIDEBAR VERTICAL --}}
-            <aside class="js-sidebar hidden md:flex flex-col bg-petunia-900 dark:bg-petunia-1000 z-40 shrink-0 shadow-lg overflow-x-hidden" 
-                :class="loaded ? 'transition-all duration-300 ease-in-out' : ''">
+            <aside class="js-sidebar hidden md:flex flex-col bg-petunia-900 dark:bg-petunia-1000 z-40 shrink-0 shadow-lg overflow-x-hidden">
                 
-                <div class="h-16 flex items-center justify-between px-4 border-b border-white/10 shrink-0 min-w-[72px]">
-                    <a href="{{ route('dashboard') }}">
-                        <div class="flex items-center gap-3 overflow-hidden whitespace-nowrap" x-show="!sidebarMinimized" x-transition.opacity.duration.300ms>
-                            <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-8 w-auto" alt="Instituto Percorre">
-                        </div>
-                    </a>   
-                    <button @click="toggleMinimize()" class="p-1.5 text-white/70 hover:bg-white/10 rounded-lg transition-colors shrink-0" :class="sidebarMinimized ? 'mx-auto' : ''" title="Recolher / Expandir">
-                        <i class="text-xl ph ph-list"></i>
+                <div class="h-16 flex items-center justify-between border-b border-white/10 shrink-0 min-w-[72px]"
+                     :class="(loaded ? 'transition-all duration-300 ease-in-out ' : '') + (sidebarMinimized ? 'px-1.5 gap-1' : 'px-4 gap-2')">
+                    <a href="{{ route('dashboard') }}"
+                       class="relative flex items-center flex-1 min-w-0 h-8 overflow-hidden"
+                       title="Instituto Percorre">
+                        {{-- Logo completa (apenas sidebar expandida) --}}
+                        <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}"
+                             class="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-auto max-w-none"
+                             :class="(loaded ? 'transition-all duration-300 ease-in-out ' : '') + (sidebarMinimized ? 'opacity-0 -translate-x-2 pointer-events-none' : 'opacity-100 translate-x-0')"
+                             alt="Instituto Percorre">
+
+                        {{-- Novo ícone (apenas sidebar compacta) --}}
+                        <img src="{{ asset('images/logo-svg.svg') }}"
+                             x-cloak
+                             class="absolute left-0.5 top-1/2 -translate-y-1/2 h-5 w-auto max-w-none"
+                             :class="(loaded ? 'transition-all duration-300 ease-in-out ' : '') + (sidebarMinimized ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none')"
+                             alt="Instituto Percorre">
+                    </a>
+
+                    <button @click="toggleMinimize()"
+                            class="text-white/70 hover:bg-white/10 hover:text-white rounded-lg shrink-0"
+                            :class="(loaded ? 'transition-all duration-300 ease-in-out ' : '') + (sidebarMinimized ? 'p-1' : 'p-1.5')"
+                            title="Recolher / Expandir">
+                        <i class="ph ph-list transition-all duration-300 ease-in-out" :class="sidebarMinimized ? 'text-lg' : 'text-xl'"></i>
                     </button>
                 </div>
                 
-                <div class="flex-1 overflow-y-auto custom-scrollbar py-4 space-y-1.5 px-3 min-w-[72px]">
+                <div class="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar py-4 space-y-1.5 px-3 min-w-[72px]">
                     
                     {{-- Dashboard --}}
-                    <a href="{{ route('dashboard') }}" 
-                    x-data="{ hover: false }" 
-                    @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = ($el.getBoundingClientRect().top + 6) + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
-                    @mouseleave="hover = false" 
-                    class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold rounded-lg transition-colors relative whitespace-nowrap {{ request()->routeIs('dashboard') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white' }}" 
-                    :class="sidebarMinimized ? 'justify-center' : ''">
-                        <i class="text-xl ph ph-squares-four shrink-0"></i>
-                        <span x-show="!sidebarMinimized" x-transition.opacity>Dashboard</span>
-                        
-                        <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2 pointer-events-none">
-                            <div class="px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg">
-                                Dashboard
+                    @if($pode('principal.dashboard.visualizar'))
+                        <a href="{{ route('dashboard') }}" 
+                           x-data="{ hover: false }" 
+                           @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = ($el.getBoundingClientRect().top + 6) + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
+                           @mouseleave="hover = false" 
+                           class="flex items-center gap-3 px-3.5 py-2.5 text-sm font-semibold rounded-lg transition-colors relative whitespace-nowrap overflow-hidden {{ request()->routeIs('dashboard') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white' }}">
+                            <i class="text-xl ph ph-squares-four shrink-0"></i>
+                            <span class="js-sidebar-label truncate">Dashboard</span>
+                            
+                            <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2 pointer-events-none">
+                                <div class="px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg">
+                                    Dashboard
+                                </div>
                             </div>
-                        </div>
-                    </a>
+                        </a>
+                    @endif
 
                     {{-- Grupos Dinâmicos --}}
                     @foreach($menuGrupos as $grupo)
@@ -289,15 +257,15 @@
                         @continue($itensVisiveis->whereNotNull('route')->isEmpty())
 
                         <div x-data="{ open: {{ $temLinkAtivo ? 'true' : 'false' }}, hover: false }" 
-                            @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
-                            @mouseleave="hover = false" 
-                            class="relative whitespace-nowrap">
-                            <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold rounded-lg transition-colors {{ $temLinkAtivo ? 'bg-white/10 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white' }}" :class="sidebarMinimized ? 'justify-center' : ''">
-                                <div class="flex items-center gap-3">
+                             @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
+                             @mouseleave="hover = false" 
+                             class="relative whitespace-nowrap">
+                            <button @click="open = !open" class="w-full flex items-center justify-between px-3.5 py-2.5 text-sm font-semibold rounded-lg transition-colors overflow-hidden {{ $temLinkAtivo ? 'bg-white/10 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white' }}">
+                                <div class="flex items-center gap-3 min-w-0">
                                     <i class="text-xl ph {{ $grupo['icone'] }} shrink-0"></i>
-                                    <span x-show="!sidebarMinimized">{{ $grupo['titulo'] }}</span>
+                                    <span class="js-sidebar-label truncate">{{ $grupo['titulo'] }}</span>
                                 </div>
-                                <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                                <i class="js-sidebar-label ph ph-caret-down text-[10px] shrink-0 transition-transform" :class="open ? 'rotate-180' : ''"></i>
                             </button>
                             
                             {{-- Submenu Expandido --}}
@@ -348,10 +316,9 @@
                                     <i class="text-2xl ph ph-list"></i>
                                 </button>
                                 
-                                <a href="{{ route('dashboard') }}">
-                                    <div class="js-topcontrols flex-shrink-0 items-center gap-4 hidden md:flex" 
-                                        :class="loaded ? 'transition-all duration-300' : ''">
-                                        <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-8 w-auto" alt="Instituto Percorre">
+                                <a href="{{ route('dashboard') }}" class="hidden md:block overflow-hidden">
+                                    <div class="js-topcontrols flex items-center gap-4">
+                                        <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-8 w-auto max-w-none shrink-0" alt="Instituto Percorre">
                                     </div>
                                 </a>
                             </div>
@@ -381,7 +348,7 @@
                                     </span>
                                 @endif
 
-                                @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
+                                @if($pode('portal.noticias'))
                                     <a href="{{ route('portal.index') }}" target="_blank" class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white/90 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors shadow-sm whitespace-nowrap shrink-0" title="Abrir Portal Público">
                                         <i class="ph ph-newspaper text-sm"></i> <span>Ver Portal</span> <i class="ph ph-arrow-up-right text-[10px] opacity-70"></i>
                                     </a>
@@ -415,13 +382,14 @@
                 </header>
 
                 {{-- DESKTOP: TOPNAV HORIZONTAL --}}
-                <nav class="js-topnav hidden md:block bg-white border-b border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-800 relative z-[100] shrink-0 origin-top"
-                     :class="loaded ? 'transition-all duration-300 ease-in-out' : ''">
+                <nav class="js-topnav hidden md:block bg-white border-b border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-800 relative z-[100] shrink-0 origin-top">
                     <div class="sm:px-6 px-8 mx-auto w-full max-w-8xl">
                         <div class="flex flex-wrap items-center min-h-[3rem] py-1 gap-x-2 gap-y-1">
-                            <a href="{{ route('dashboard') }}" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold transition-colors rounded-md {{ request()->routeIs('dashboard') ? 'text-purpura-700 bg-purpura-50 dark:bg-gray-800 dark:text-white' : 'text-gray-600 hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300' }}">
-                                <i class="text-base ph ph-squares-four"></i> Dashboard
-                            </a>
+                            @if($pode('principal.dashboard.visualizar'))
+                                <a href="{{ route('dashboard') }}" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold transition-colors rounded-md {{ request()->routeIs('dashboard') ? 'text-purpura-700 bg-purpura-50 dark:bg-gray-800 dark:text-white' : 'text-gray-600 hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300' }}">
+                                    <i class="text-base ph ph-squares-four"></i> Dashboard
+                                </a>
+                            @endif
 
                             @foreach($menuGrupos as $grupo)
                                 @continue(!$grupo['visivel'])
@@ -479,9 +447,11 @@
                 </div>
 
                 <div class="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
-                    <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg {{ request()->routeIs('dashboard') ? 'bg-purpura-50 text-purpura-700 font-bold dark:bg-gray-700 dark:text-white' : 'text-gray-700 dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700' }}">
-                        <i class="text-lg ph ph-squares-four"></i> Dashboard
-                    </a>
+                    @if($pode('principal.dashboard.visualizar'))
+                        <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg {{ request()->routeIs('dashboard') ? 'bg-purpura-50 text-purpura-700 font-bold dark:bg-gray-700 dark:text-white' : 'text-gray-700 dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700' }}">
+                            <i class="text-lg ph ph-squares-four"></i> Dashboard
+                        </a>
+                    @endif
 
                     @foreach($menuGrupos as $grupo)
                         @continue(!$grupo['visivel'])

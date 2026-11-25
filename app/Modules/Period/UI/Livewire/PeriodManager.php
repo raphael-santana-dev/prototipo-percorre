@@ -14,6 +14,7 @@ use Livewire\WithPagination;
 use App\Helpers\BreadcrumbHelper;
 use App\Traits\ComPadraoListagem;
 use App\Traits\WithToggleStatus;
+use App\Traits\ValidaAcesso;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -21,7 +22,7 @@ use Illuminate\Validation\Rule;
 #[Title('Gerenciar Ciclos - Administrativo')]
 class PeriodManager extends Component
 {
-    use WithPagination, ComPadraoListagem, WithToggleStatus {
+    use WithPagination, ComPadraoListagem, WithToggleStatus, ValidaAcesso {
         WithToggleStatus::toggleStatus as traitToggleStatus;
     }
 
@@ -70,8 +71,7 @@ class PeriodManager extends Component
 
     public function mount()
     {
-        //abort_if(!feature('ciclo.listar'), 403, 'O módulo de ciclos de inscrição está desativado.');
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.listar'), 403);
+        $this->autorizarTela('inscricao.ciclo.listar', 'ciclos de inscrição');
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
     }
@@ -173,8 +173,9 @@ class PeriodManager extends Component
 
     public function toggleStatus($id)
     {
-        //abort_if(!feature('ciclo.editar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
+        if (!$this->autorizarAcao('inscricao.ciclo.status', 'alterar status do ciclo')) {
+            return;
+        }
 
         $ciclo = Ciclo::findOrFail($id);
         $novoStatus = !$ciclo->status;
@@ -192,8 +193,9 @@ class PeriodManager extends Component
 
     public function abrirModal()
     {
-        //abort_if(!feature('ciclo.criar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.criar'), 403);
+        if (!$this->autorizarAcao('inscricao.ciclo.criar', 'criar novo ciclo')) {
+            return;
+        }
 
         $this->resetValidation();
         $this->reset([
@@ -218,6 +220,10 @@ class PeriodManager extends Component
 
     public function proximoPasso()
     {
+        if (!$this->autorizarAcao('inscricao.ciclo.criar', 'configurar e salvar novo ciclo')) {
+            return;
+        }
+
         if ($this->passoAtual === 1) {
             if ($this->tipo_ciclo === 'customizado') {
                 $this->slug_projeto = Str::slug($this->slug_projeto ?: $this->nome);
@@ -490,8 +496,9 @@ class PeriodManager extends Component
 
     public function delete(int $id)
     {
-        //abort_if(!feature('ciclo.excluir'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.excluir'), 403);
+        if (!$this->autorizarAcao('inscricao.ciclo.excluir', 'excluir ciclo')) {
+            return;
+        }
 
         $ciclo = Ciclo::findOrFail($id);
         if ($ciclo->encerrado) {
@@ -518,8 +525,9 @@ class PeriodManager extends Component
 
     public function toggleBloqueio(int $id)
     {
-        //abort_if(!feature('ciclo.editar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
+        if (!$this->autorizarAcao('inscricao.ciclo.bloquear', 'bloquear ou desbloquear inscrições do ciclo')) {
+            return;
+        }
 
         $ciclo = Ciclo::findOrFail($id);
         $ciclo->bloqueado = !$ciclo->bloqueado;
@@ -531,6 +539,10 @@ class PeriodManager extends Component
 
     public function toggleEncerrado(int $id): void
     {
+        if (!$this->autorizarAcao('inscricao.ciclo.encerrar', 'encerrar ou reabrir edição do ciclo')) {
+            return;
+        }
+
         $ciclo = Ciclo::findOrFail($id);
         $ciclo->encerrado = !$ciclo->encerrado;
         $ciclo->save();
@@ -543,8 +555,9 @@ class PeriodManager extends Component
 
     public function duplicar(int $id)
     {
-        //abort_if(!feature('ciclo.criar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.criar'), 403);
+        if (!$this->autorizarAcao('inscricao.ciclo.duplicar', 'duplicar ciclo')) {
+            return;
+        }
         
         $cicloOriginal = Ciclo::with(['cursos', 'statusPipeline', 'unidades', 'turnos'])->findOrFail($id);
         $novoCiclo = $cicloOriginal->replicate();
@@ -583,6 +596,10 @@ class PeriodManager extends Component
 
     public function showQuickView(int $id)
     {
+        if (!$this->autorizarAcao('inscricao.ciclo.visualizar', 'visualizar informações rápidas do ciclo')) {
+            return;
+        }
+
         $ciclo = Ciclo::withCount('inscricoes')->with(['cursos', 'unidades', 'fases'])->findOrFail($id);
         $vagasOfertadas = OfertaVaga::where('ciclo_id', $id)->sum('vagas');
         $vagasPreenchidas = \App\Models\Inscricao::where('ciclo_id', $id)
@@ -595,17 +612,22 @@ class PeriodManager extends Component
             ? url('/inscricao/' . $ciclo->slug_projeto)
             : url('/inscricao');
 
+        $dadosQuickView = [
+            'Status do Ciclo' => $ciclo->status ? '<span class="px-2 py-1 bg-green-50 text-green-700 text-[10px] font-bold rounded border border-green-200">ATIVO</span>' : '<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] font-bold rounded border">INATIVO</span>',
+            'Modalidade e Link' => '<span class="text-xs font-bold uppercase">' . ($ciclo->tipo_ciclo === 'customizado' ? 'Projeto Customizado' : 'Processo Regular') . '</span><br><a href="' . $urlPublica . '" target="_blank" class="text-xs font-mono text-purpura-600 hover:underline">' . $urlPublica . ' ↗</a>',
+            'Fase Atual Liberada' => '<span class="px-2.5 py-1 bg-purpura-50 text-purpura-700 text-xs font-bold rounded border border-purpura-200">' . e($ciclo->fase_atual_nome) . '</span>',
+            'Inscrições Realizadas' => '<span class="font-black text-xl text-purpura-600">'.$ciclo->inscricoes_count.'</span>',
+        ];
+
+        if (feature('inscricao.ciclo.detalhar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.ciclo.detalhar'))) {
+            $dadosQuickView['Ações Extras'] = '<a href="'.route('ciclos.show', $ciclo->id).'" class="font-bold text-purpura-600 hover:underline text-sm">Acessar Detalhes</a>';
+        }
+
         $this->dispatch('load-quick-view', [
             'title' => $ciclo->nome,
             'subtitle' => "Semestre {$ciclo->ano}.{$ciclo->semestre} • De " . $ciclo->data_inicio->format('d/m/Y') . " até " . $ciclo->data_fim->format('d/m/Y'),
             'icon' => 'ph-calendar-check',
-            'data' => [
-                'Status do Ciclo' => $ciclo->status ? '<span class="px-2 py-1 bg-green-50 text-green-700 text-[10px] font-bold rounded border border-green-200">ATIVO</span>' : '<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] font-bold rounded border">INATIVO</span>',
-                'Modalidade e Link' => '<span class="text-xs font-bold uppercase">' . ($ciclo->tipo_ciclo === 'customizado' ? 'Projeto Customizado' : 'Processo Regular') . '</span><br><a href="' . $urlPublica . '" target="_blank" class="text-xs font-mono text-purpura-600 hover:underline">' . $urlPublica . ' ↗</a>',
-                'Fase Atual Liberada' => '<span class="px-2.5 py-1 bg-purpura-50 text-purpura-700 text-xs font-bold rounded border border-purpura-200">' . e($ciclo->fase_atual_nome) . '</span>',
-                'Inscrições Realizadas' => '<span class="font-black text-xl text-purpura-600">'.$ciclo->inscricoes_count.'</span>',
-                'Ações Extras' => '<a href="'.route('ciclos.show', $ciclo->id).'" class="font-bold text-purpura-600 hover:underline text-sm">Acessar Detalhes</a>'
-            ]
+            'data' => $dadosQuickView,
         ]);
     }
 

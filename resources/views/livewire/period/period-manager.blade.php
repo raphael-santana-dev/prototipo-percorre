@@ -1,3 +1,9 @@
+@php
+    $u = auth()->user();
+    $isDev = $u?->hasRole('dev') ?? false;
+    $pode = fn(string $chave) => feature($chave) && ($isDev || ($u && $u->can($chave)));
+@endphp
+
 <div class="w-full font-sans relative" wire:poll.8s x-data="{ modalAberto: @entangle('modalAberto') }" x-effect="document.body.classList.toggle('overflow-hidden', modalAberto)">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <x-page-header 
@@ -11,6 +17,7 @@
         <x-slot name="actions">
             
             {{-- BOTÃO E MODAL: INCORPORAR INSCRIÇÃO (COM X-TELEPORT E Z-[999]) --}}
+            @if($pode('inscricao.ciclo.incorporar'))
             <div x-data="{ showEmbedInscricao: false }" @keydown.escape.window="showEmbedInscricao = false" class="relative inline-block text-left">
                 <button type="button" @click="showEmbedInscricao = true" class="btn btn--secondary btn--medium bg-white dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700">
                     <i class="ph ph-code text-purpura-600"></i> Incorporar / Link
@@ -60,13 +67,9 @@
                             </div>
                             
                             <div class="px-6 py-3.5 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                                @if(auth()->user()->hasAnyRole(['dev', 'admin']) || auth()->user()->can('formulario.testar') || auth()->user()->can('inscricao.criar'))
-                                    <a href="{{ url('/inscricao?modo=teste') }}" target="_blank" class="text-xs font-medium text-amber-700 hover:text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors">
-                                        <i class="ph ph-flask"></i> Testar em Sandbox ↗
-                                    </a>
-                                @else
-                                    <span></span>
-                                @endif
+                                <a href="{{ url('/inscricao?modo=teste') }}" target="_blank" class="text-xs font-medium text-amber-700 hover:text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors">
+                                    <i class="ph ph-flask"></i> Testar em Sandbox ↗
+                                </a>
                                 <div class="flex items-center gap-2">
                                     <button type="button" @click="showEmbedInscricao = false" class="btn btn--secondary btn--small">
                                         Fechar
@@ -80,8 +83,9 @@
                     </div>
                 </template>
             </div>
+            @endif
 
-            @if(feature('ciclo.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.criar')))
+            @if($pode('inscricao.ciclo.criar'))
                 <button wire:click="abrirModal" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none">
                     <i class="ph ph-plus"></i> Novo Ciclo
                 </button>
@@ -184,18 +188,18 @@
                     </div>
                 </div>
 
-                @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
-                    @if(count($selecionadas) > 0)
-                        <div class="bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 p-3 rounded-lg flex flex-col lg:flex-row justify-between items-center gap-4 w-full">
-                            <div class="flex items-center shrink-0">
-                                <span class="font-medium text-white text-xs">{{ count($selecionadas) }} ciclo(s) selecionado(s)</span>
-                                <button type="button" wire:click="desmarcarTodas" class="ml-4 text-xs text-gray-400 hover:text-white transition">Limpar Seleção</button>
-                            </div>
-                            <div class="flex flex-wrap items-center justify-end gap-2 w-full lg:w-auto">
-                                <button type="button" class="btn btn--secondary btn--small !text-red-500 !border-red-500 hover:!bg-red-500 hover:!text-white" onclick="confirm('Não implementado')">Deletar Selecionados</button>
-                            </div>
+                @if($pode('inscricao.ciclo.selecionar') && count($selecionadas) > 0)
+                    <div class="bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 p-3 rounded-lg flex flex-col lg:flex-row justify-between items-center gap-4 w-full">
+                        <div class="flex items-center shrink-0">
+                            <span class="font-medium text-white text-xs">{{ count($selecionadas) }} ciclo(s) selecionado(s)</span>
+                            <button type="button" wire:click="desmarcarTodas" class="ml-4 text-xs text-gray-400 hover:text-white transition">Limpar Seleção</button>
                         </div>
-                    @endif
+                        <div class="flex flex-wrap items-center justify-end gap-2 w-full lg:w-auto">
+                            @if($pode('inscricao.ciclo.excluir'))
+                                <button type="button" class="btn btn--secondary btn--small !text-red-500 !border-red-500 hover:!bg-red-500 hover:!text-white" onclick="confirm('Não implementado')">Deletar Selecionados</button>
+                            @endif
+                        </div>
+                    </div>
                 @endif
             </div>
         </x-slot>
@@ -209,7 +213,9 @@
             <tr class="transition-colors hover:bg-gray-50/70 dark:hover:bg-gray-800/40" wire:key="linha-ciclo-{{ $ciclo->id }}">
                 
                 <td class="px-4 py-2 text-center whitespace-nowrap w-10">
-                    <input type="checkbox" wire:model.live="selecionadas" value="{{ $ciclo->id }}" class="rounded text-purpura-600 border-gray-300 w-4 h-4 cursor-pointer" wire:key="checkbox-lista-{{ $ciclo->id }}">
+                    @if($pode('inscricao.ciclo.selecionar'))
+                        <input type="checkbox" wire:model.live="selecionadas" value="{{ $ciclo->id }}" class="rounded text-purpura-600 border-gray-300 w-4 h-4 cursor-pointer" wire:key="checkbox-lista-{{ $ciclo->id }}">
+                    @endif
                 </td>
                 
                 <td class="px-4 py-2 whitespace-nowrap text-xs font-mono text-gray-400">#{{ str_pad($ciclo->id, 3, '0', STR_PAD_LEFT) }}</td>
@@ -290,26 +296,32 @@
                 
                 {{-- 9. Bloqueio --}}
                 <td class="px-4 py-2 whitespace-nowrap text-center">
-                    @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
-                        <div class="inline-flex items-center justify-center gap-1.5">
+                    <div class="inline-flex items-center justify-center gap-1.5">
+                        @if($pode('inscricao.ciclo.bloquear'))
                             <button type="button" wire:click="toggleBloqueio({{ $ciclo->id }})" class="p-1.5 rounded border transition-colors {{ $ciclo->bloqueado ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400' : 'bg-white text-gray-400 border-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700' }}" title="{{ $ciclo->bloqueado ? 'Inscrições Congeladas (Clique para desbloquear inscrições)' : 'Inscrições Liberadas (Clique para congelar inscrições)' }}">
                                 <i class="text-base ph {{ $ciclo->bloqueado ? 'ph-lock-key' : 'ph-lock-key-open' }}"></i>
                             </button>
+                        @else
+                            <span class="p-1.5 rounded border {{ $ciclo->bloqueado ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400' : 'bg-gray-50 text-gray-400 border-gray-200 dark:bg-gray-800 dark:border-gray-700' }}" title="{{ $ciclo->bloqueado ? 'Inscrições Congeladas' : 'Inscrições Liberadas' }}">
+                                <i class="text-base ph {{ $ciclo->bloqueado ? 'ph-lock-key' : 'ph-lock-key-open' }}"></i>
+                            </span>
+                        @endif
 
+                        @if($pode('inscricao.ciclo.encerrar'))
                             <button type="button" wire:click="toggleEncerrado({{ $ciclo->id }})" class="px-2 py-1 rounded border text-[10px] font-bold uppercase transition-colors flex items-center gap-1 {{ $ciclo->encerrado ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-300' : 'bg-white text-gray-400 border-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700' }}" title="{{ $ciclo->encerrado ? 'Ciclo Encerrado: Edição do Ciclo/Formulário bloqueada (Inscrições liberadas). Clique para reabrir.' : 'Clique para Encerrar a edição do Ciclo/Formulário (mantendo inscrições editáveis)' }}">
                                 <i class="text-xs ph-fill {{ $ciclo->encerrado ? 'ph-archive' : 'ph-pencil-slash' }}"></i>
-                                <span>{{ $ciclo->encerrado ? 'Encerrado' : 'Aberto' }}</span>
                             </button>
-                        </div>
-                    @else
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium uppercase {{ $ciclo->encerrado ? 'bg-amber-50 text-amber-800 border border-amber-200' : ($ciclo->bloqueado ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-gray-100 text-gray-500') }}">
-                            {{ $ciclo->encerrado ? 'Encerrado' : ($ciclo->bloqueado ? 'Bloqueado' : 'Aberto') }}
-                        </span>
-                    @endif
+                        @else
+                            <span class="px-2 py-1 rounded border text-[10px] font-bold uppercase flex items-center gap-1 {{ $ciclo->encerrado ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-300' : 'bg-gray-50 text-gray-400 border-gray-200 dark:bg-gray-800 dark:border-gray-700' }}">
+                                <i class="text-xs ph-fill {{ $ciclo->encerrado ? 'ph-archive' : 'ph-pencil-slash' }}"></i>
+                            </span>
+                        @endif
+                    </div>
                 </td>
 
+                {{-- 10. Status --}}
                 <td class="px-4 py-2 whitespace-nowrap">
-                    @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                    @if($pode('inscricao.ciclo.status'))
                         <div class="flex items-center gap-2">
                             <x-toggle :status="$ciclo->status" action="toggleStatus({{ $ciclo->id }})" />
                             <span class="text-[11px] font-medium {{ $ciclo->status ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400' }}">{{ $ciclo->status ? 'Ativo' : 'Inativo' }}</span>
@@ -319,34 +331,62 @@
                     @endif
                 </td>
                 
+                {{-- 11. Ações --}}
                 <td class="px-4 py-2 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
-                        <button x-data="{ copiado: false }" 
-                                @click="
-                                    let code = `<iframe src='{{ $urlPublicaCiclo }}?embed=true' width='100%' height='800' frameborder='0' style='border:none; border-radius: 8px;'></iframe>`;
-                                    navigator.clipboard.writeText(code); 
-                                    copiado = true; 
-                                    setTimeout(() => copiado = false, 2000);
-                                " 
-                                class="p-1.5 transition-colors rounded relative" 
-                                :class="copiado ? 'text-emerald-600 bg-emerald-50' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800'"
-                                title="Copiar Código de Incorporação (Iframe) - {{ $urlPublicaCiclo }}">
-                            <i class="text-base ph" :class="copiado ? 'ph-check-circle' : 'ph-code'"></i>
-                        </button>
-                        <a href="{{ route('ciclos.crm', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Ver CRM"><i class="text-base ph ph-kanban"></i></a>
-                        <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Visualização Rápida"><i class="text-base ph ph-info"></i></button>
+                        @if($pode('inscricao.ciclo.incorporar'))
+                            <button x-data="{ copiado: false }" 
+                                    @click="
+                                        let code = `<iframe src='{{ $urlPublicaCiclo }}?embed=true' width='100%' height='800' frameborder='0' style='border:none; border-radius: 8px;'></iframe>`;
+                                        navigator.clipboard.writeText(code); 
+                                        copiado = true; 
+                                        setTimeout(() => copiado = false, 2000);
+                                    " 
+                                    class="p-1.5 transition-colors rounded relative" 
+                                    :class="copiado ? 'text-emerald-600 bg-emerald-50' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800'"
+                                    title="Copiar Código de Incorporação (Iframe) - {{ $urlPublicaCiclo }}">
+                                <i class="text-base ph" :class="copiado ? 'ph-check-circle' : 'ph-code'"></i>
+                            </button>
+                        @endif
+
+                        @if($pode('inscricao.inscritos.listar'))
+                            <a href="{{ route('ciclos.crm', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Ver CRM"><i class="text-base ph ph-kanban"></i></a>
+                        @endif
+
+                        @if($pode('inscricao.ciclo.visualizar'))
+                            <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Visualização Rápida"><i class="text-base ph ph-info"></i></button>
+                        @endif
                         <a href="{{ $urlPublicaCiclo . '?modo=teste&ciclo_id=' . $ciclo->id }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Testar Formulário em Sandbox">
                             <i class="text-base ph ph-flask"></i>
                         </a>
                         <a href="{{ $urlPublicaCiclo . '?preview=true&ciclo_id=' . $ciclo->id }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Pré-visualizar Formulário de Inscrição">
                             <i class="text-base ph ph-arrow-square-out"></i>
                         </a>
-                        <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Ver Detalhes"><i class="text-base ph ph-eye"></i></a>
-                        <button wire:click="duplicar({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Duplicar"><i class="text-base ph ph-copy"></i></button>
-                        <a href="{{ route('ciclos.edit', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Editar Completo"><i class="text-base ph ph-pencil-simple"></i></a>
-                        <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Construtor Formulário Público"><i class="text-base ph ph-list-dashes"></i></a>
-                        <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Regras de Pontuação"><i class="text-base ph ph-star"></i></a>
-                        <button wire:click="delete({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-800" title="Excluir" onclick="confirm('Excluir permanentemente?') || event.stopImmediatePropagation()"><i class="text-base ph ph-trash"></i></button>
+                        
+
+                        @if($pode('inscricao.ciclo.detalhar'))
+                            <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Ver Detalhes"><i class="text-base ph ph-eye"></i></a>
+                        @endif
+
+                        @if($pode('inscricao.ciclo.duplicar'))
+                            <button wire:click="duplicar({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Duplicar"><i class="text-base ph ph-copy"></i></button>
+                        @endif
+
+                        @if($pode('inscricao.ciclo.editar'))
+                            <a href="{{ route('ciclos.edit', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Editar Completo"><i class="text-base ph ph-pencil-simple"></i></a>
+                        @endif
+
+                        @if($pode('inscricao.ciclo.construir'))
+                            <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Construtor Formulário Público"><i class="text-base ph ph-list-dashes"></i></a>
+                        @endif
+
+                        @if($pode('inscricao.ciclo.regras'))
+                            <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Regras de Pontuação"><i class="text-base ph ph-star"></i></a>
+                        @endif
+
+                        @if($pode('inscricao.ciclo.excluir'))
+                            <button wire:click="delete({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-800" title="Excluir" onclick="confirm('Excluir permanentemente?') || event.stopImmediatePropagation()"><i class="text-base ph ph-trash"></i></button>
+                        @endif
                     </div>
                 </td>
             </tr>
@@ -371,7 +411,9 @@
                                 <span class="px-2 py-0.5 text-[10px] font-medium uppercase bg-gray-100 text-gray-700 border border-gray-200 rounded">Projeto</span>
                             @endif
                         </div>
-                        <input type="checkbox" wire:model.live="selecionadas" value="{{ $ciclo->id }}" wire:key="checkbox-card-{{ $ciclo->id }}" class="rounded text-purpura-600 border-gray-300 w-4 h-4 cursor-pointer">
+                        @if($pode('inscricao.ciclo.selecionar'))
+                            <input type="checkbox" wire:model.live="selecionadas" value="{{ $ciclo->id }}" wire:key="checkbox-card-{{ $ciclo->id }}" class="rounded text-purpura-600 border-gray-300 w-4 h-4 cursor-pointer">
+                        @endif
                     </div>
 
                     <div class="mb-3 w-full">
@@ -409,9 +451,15 @@
                     <div class="flex items-center justify-between mt-auto pt-3 border-t border-gray-100 dark:border-gray-700 w-full">
                         <span class="text-xs font-medium text-gray-700 dark:text-gray-300">{{ $ciclo->inscricoes_count ?? 0 }} inscritos</span>
                         <div class="flex items-center gap-1">
-                            <a href="{{ route('ciclos.crm', $ciclo->id) }}" class="p-1.5 text-gray-400 hover:text-gray-900 rounded transition" title="CRM Kanban"><i class="text-base ph ph-kanban"></i></a>
-                            <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 hover:text-gray-900 rounded transition" title="Info"><i class="text-base ph ph-info"></i></button>
-                            <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-1.5 text-gray-400 hover:text-gray-900 rounded transition"><i class="text-base ph ph-arrow-right"></i></a>
+                            @if($pode('inscricao.inscritos.listar'))
+                                <a href="{{ route('ciclos.crm', $ciclo->id) }}" class="p-1.5 text-gray-400 hover:text-gray-900 rounded transition" title="CRM Kanban"><i class="text-base ph ph-kanban"></i></a>
+                            @endif
+                            @if($pode('inscricao.ciclo.visualizar'))
+                                <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 hover:text-gray-900 rounded transition" title="Info"><i class="text-base ph ph-info"></i></button>
+                            @endif
+                            @if($pode('inscricao.ciclo.detalhar'))
+                                <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-1.5 text-gray-400 hover:text-gray-900 rounded transition" title="Ver Detalhes"><i class="text-base ph ph-arrow-right"></i></a>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -849,9 +897,11 @@
                                     
                                     @if($cicloCriadoId)
                                         <div class="pt-3 flex flex-wrap justify-center gap-3">
-                                            <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $cicloCriadoId]) }}" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none">
-                                                Ir para o Construtor de Formulário
-                                            </a>
+                                            @if($pode('inscricao.ciclo.construir'))
+                                                <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $cicloCriadoId]) }}" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none">
+                                                    Ir para o Construtor de Formulário
+                                                </a>
+                                            @endif
                                             <button type="button" wire:click="$set('modalAberto', false)" class="btn btn--secondary btn--medium">
                                                 Concluir e Fechar
                                             </button>
