@@ -117,6 +117,12 @@ class DynamicFields extends Component
         return app(FormBuilderService::class);
     }
 
+    #[Computed]
+    public function fontesOpcoesTabela(): array
+    {
+        return FormBuilderService::getFontesOpcoesTabela();
+    }
+
     private function getContextColumn(): string
     {
         return $this->contextoTipo === 'ciclo' ? 'ciclo_id' : 'formulario_id';
@@ -521,6 +527,10 @@ class DynamicFields extends Component
             $this->configuracoes['tipo_destino']      = $this->configuracoes['tipo_destino'] ?? 'externo';
             $this->configuracoes['permitir_download'] = $this->configuracoes['permitir_download'] ?? true;
             $this->configuracoes['abrir_preview']     = $this->configuracoes['abrir_preview'] ?? true;
+        } elseif (in_array($tipo, ['select', 'radio', 'check'], true)) {
+            $this->configuracoes['usar_fonte_tabela'] = (bool) ($this->configuracoes['usar_fonte_tabela'] ?? false);
+            $this->configuracoes['fonte_tabela']      = $this->configuracoes['fonte_tabela'] ?? '';
+            $this->configuracoes['habilitar_outro']   = (bool) ($this->configuracoes['habilitar_outro'] ?? false);
         } elseif ($tipo === 'system') {
             $this->configuracoes['vincular_curso_unidade'] = $this->configuracoes['vincular_curso_unidade'] ?? true;
             $this->configuracoes['vincular_turno_curso']   = $this->configuracoes['vincular_turno_curso'] ?? true;
@@ -715,12 +725,22 @@ class DynamicFields extends Component
         $this->depende_operador   = $campo->depende_operador ?: '=';
         $this->depende_valor      = $campo->depende_valor;
 
-        $this->opcoes = is_array($campo->opcoes)
-            ? (isset($campo->opcoes['origem_bd']) ? 'bd:' . $campo->opcoes['origem_bd'] : implode("\n", $campo->opcoes))
+        $opcoesDecod = is_string($campo->opcoes) ? json_decode($campo->opcoes, true) : $campo->opcoes;
+        $origemBdSalva = is_array($opcoesDecod) ? ($opcoesDecod['origem_bd'] ?? null) : null;
+
+        $this->opcoes = is_array($opcoesDecod)
+            ? ($origemBdSalva ? '' : implode("\n", $opcoesDecod))
             : ($campo->opcoes ?? '');
 
         $config = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
         $this->configuracoes = $config ?: [];
+
+        if (in_array($campo->tipo, ['select', 'radio', 'check'], true)) {
+            $this->configuracoes['usar_fonte_tabela'] = (bool) ($this->configuracoes['usar_fonte_tabela'] ?? !empty($origemBdSalva));
+            $this->configuracoes['fonte_tabela']      = $this->configuracoes['fonte_tabela'] ?? ($origemBdSalva ?? '');
+            $this->configuracoes['habilitar_outro']   = (bool) ($this->configuracoes['habilitar_outro'] ?? false);
+        }
+
         $this->inicializarDefaultsDicas();
 
         $condSalvas = $this->configuracoes['condicoes_visibilidade'] ?? null;
@@ -781,15 +801,34 @@ class DynamicFields extends Component
             'largura' => 'required|integer',
         ]);
 
-        $arrayOpcoes = null;
-        if (in_array($this->tipo, ['select', 'radio', 'check']) && !empty($this->opcoes)) {
-            $opLimpas = trim($this->opcoes);
-            $arrayOpcoes = str_starts_with(strtolower($opLimpas), 'bd:')
-                ? ['origem_bd' => trim(substr($opLimpas, 3))]
-                : array_values(array_filter(array_map('trim', explode("\n", $this->opcoes)), fn($v) => $v !== ''));
-        }
-
         $cfg = $this->configuracoes ?? [];
+        $arrayOpcoes = null;
+
+        if (in_array($this->tipo, ['select', 'radio', 'check'], true)) {
+            $usarTabela = !empty($cfg['usar_fonte_tabela']);
+            $cfg['usar_fonte_tabela'] = $usarTabela;
+            $cfg['habilitar_outro']   = !empty($cfg['habilitar_outro']);
+
+            if ($usarTabela) {
+                $fontesValidas = array_keys(FormBuilderService::getFontesOpcoesTabela());
+                $this->validate([
+                    'configuracoes.fonte_tabela' => ['required', Rule::in($fontesValidas)],
+                ], [
+                    'configuracoes.fonte_tabela.required' => 'Selecione a tabela de origem das opções.',
+                    'configuracoes.fonte_tabela.in'       => 'Tabela de origem inválida.',
+                ]);
+
+                $arrayOpcoes = ['origem_bd' => $cfg['fonte_tabela']];
+            } else {
+                $cfg['fonte_tabela'] = '';
+                if (!empty($this->opcoes)) {
+                    $opLimpas = trim($this->opcoes);
+                    $arrayOpcoes = str_starts_with(strtolower($opLimpas), 'bd:')
+                        ? ['origem_bd' => trim(substr($opLimpas, 3))]
+                        : array_values(array_filter(array_map('trim', explode("\n", $this->opcoes)), fn($v) => $v !== ''));
+                }
+            }
+        }
         $cfg['dica_1_texto'] = $srv->limparHtmlQuill($cfg['dica_1_texto'] ?? '');
         $cfg['dica_2_texto'] = $srv->limparHtmlQuill($cfg['dica_2_texto'] ?? '');
         if (!empty($cfg['descricao'])) $cfg['descricao'] = $srv->limparHtmlQuill($cfg['descricao']);

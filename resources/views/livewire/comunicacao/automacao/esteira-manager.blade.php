@@ -102,6 +102,8 @@
                                 <span class="font-mono text-[10px] text-gray-400">#{{ $et->ordem }}</span>
                                 @if($et->tipo_agendamento === 'data_fixa' && $et->data_disparo)
                                     <span>{{ $et->data_disparo->format('d/m H:i') }}</span>
+                                @elseif($et->tipo_agendamento === 'apos_inscricao')
+                                    <span>+{{ $et->atraso_valor }} {{ $et->atraso_unidade }} (inscrição)</span>
                                 @elseif($et->tipo_agendamento === 'apos_etapa_anterior')
                                     <span>+{{ $et->atraso_valor }} {{ $et->atraso_unidade }}</span>
                                 @else

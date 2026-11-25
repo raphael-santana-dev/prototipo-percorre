@@ -136,6 +136,7 @@ Route::middleware('auth:web,student,company')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/escolas', \App\Modules\Escola\UI\Livewire\EscolaManager::class)->name('escolas.index');
     Route::get('/comunicacao/dashboard', \App\Modules\Comunicacao\UI\Livewire\ComunicacaoDashboard::class)
     ->name('comunicacao.dashboard');
     Route::get('/comunicacao/suri/laboratorio', SuriTestDashboard::class)->name('suri.dashboard');

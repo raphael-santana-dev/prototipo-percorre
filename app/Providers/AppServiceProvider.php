@@ -203,6 +203,9 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('comunicacao.suri.monitor',  \App\Modules\Comunicacao\UI\Livewire\SuriWebhookMonitor::class);
         Livewire::component('comunicacao.dashboard',  \App\Modules\Comunicacao\UI\Livewire\ComunicacaoDashboard::class);
         Livewire::component('comunicacao.suri.laboratorio',  \App\Modules\Comunicacao\UI\Livewire\Suri\SuriTestDashboard::class);
+        Livewire::component('escola.listagem',  \App\Modules\Escola\UI\Livewire\EscolaManager::class);
+
+
         Event::listen(Authenticated::class, function (Authenticated $event) {
             $user = $event->user;
 

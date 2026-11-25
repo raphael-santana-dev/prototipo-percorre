@@ -111,6 +111,17 @@ class EsteiraForm extends Component
         }
     }
 
+    public function updatedPublicoAlvo(): void
+    {
+        if (!in_array($this->publico_alvo, ['inscricoes', 'formulario_publico'], true)) {
+            foreach ($this->etapas as $idx => $et) {
+                if (($et['tipo_agendamento'] ?? '') === 'apos_inscricao') {
+                    $this->etapas[$idx]['tipo_agendamento'] = 'data_fixa';
+                }
+            }
+        }
+    }
+
     private function extrairMapaPadraoDoTemplate(?EmailTemplate $tpl): array
     {
         if (!$tpl) return [];
@@ -363,7 +374,7 @@ class EsteiraForm extends Component
             'etapas'                    => 'required|array|min:1',
             'etapas.*.nome'             => 'required|string|max:255',
             'etapas.*.template_id'      => 'required|exists:email_templates,id',
-            'etapas.*.tipo_agendamento' => 'required|in:data_fixa,apos_etapa_anterior,imediato',
+            'etapas.*.tipo_agendamento' => 'required|in:data_fixa,apos_etapa_anterior,apos_inscricao,imediato',
         ], [
             'nome.required'                 => 'Informe o nome da esteira de comunicação.',
             'etapas.*.nome.required'        => 'Informe o título de cada etapa.',
@@ -375,7 +386,7 @@ class EsteiraForm extends Component
                 $this->addError("etapas.{$idx}.data_disparo", 'Informe a data e hora do disparo desta etapa.');
                 return;
             }
-            if ($et['tipo_agendamento'] === 'apos_etapa_anterior' && (empty($et['atraso_valor']) || (int) $et['atraso_valor'] < 1)) {
+            if (in_array($et['tipo_agendamento'], ['apos_etapa_anterior', 'apos_inscricao'], true) && (empty($et['atraso_valor']) || (int) $et['atraso_valor'] < 1)) {
                 $this->addError("etapas.{$idx}.atraso_valor", 'Informe um intervalo válido (mínimo 1).');
                 return;
             }
@@ -447,7 +458,7 @@ class EsteiraForm extends Component
                     'tipo_acao'                   => $et['tipo_acao'] ?? 'enviar_email',
                     'tipo_agendamento'            => ($idx === 0 && $et['tipo_agendamento'] === 'apos_etapa_anterior') ? 'data_fixa' : $et['tipo_agendamento'],
                     'data_disparo'                => $et['tipo_agendamento'] === 'data_fixa' ? $et['data_disparo'] : null,
-                    'atraso_valor'                => $et['tipo_agendamento'] === 'apos_etapa_anterior' ? (int) $et['atraso_valor'] : null,
+                    'atraso_valor'                => in_array($et['tipo_agendamento'], ['apos_etapa_anterior', 'apos_inscricao'], true) ? (int) $et['atraso_valor'] : null,
                     'atraso_unidade'              => $et['atraso_unidade'] ?? 'dias',
                     'filtro_engajamento_anterior' => $idx === 0 ? 'todos' : ($et['filtro_engajamento_anterior'] ?? 'todos'),
                     'condicoes_etapa'             => [

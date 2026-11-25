@@ -82,6 +82,24 @@ class EsteiraComunicacaoService
                         continue;
                     }
 
+                    // 1.1. Verifica o atraso relativo ("X dias/horas após a data da inscrição / preenchimento")
+                    if ($etapa->tipo_agendamento === 'apos_inscricao') {
+                        $dataRef = $item['data_referencia'] ?? null;
+                        if (!$dataRef) {
+                            continue;
+                        }
+
+                        $dataBase = $dataRef instanceof Carbon ? $dataRef->copy() : Carbon::parse($dataRef);
+                        $atraso = max(1, (int) $etapa->atraso_valor);
+                        $dataPrevista = ($etapa->atraso_unidade === 'horas')
+                            ? $dataBase->addHours($atraso)
+                            : $dataBase->addDays($atraso);
+
+                        if ($agora->lt($dataPrevista)) {
+                            continue;
+                        }
+                    }
+
                     // 2. Se for Etapa > 1, verifica dependência de tempo e engajamento da Etapa Anterior
                     if ($etapa->ordem > 1 && $etapaAnterior) {
                         $disparoAnterior = EsteiraDisparo::where('esteira_id', $esteira->id)
@@ -215,6 +233,7 @@ class EsteiraComunicacaoService
                     'email'           => $insc->email,
                     'nome'            => $insc->nome,
                     'inscricao'       => $insc,
+                    'data_referencia' => $insc->data_inscricao ? Carbon::parse($insc->data_inscricao) : $insc->created_at,
                     'status_id'       => (string) $insc->status_inscricao_id,
                     'unidade_id'      => (string) $insc->unidade_id,
                     'curso_id'        => (string) $insc->curso_id,
@@ -257,6 +276,7 @@ class EsteiraComunicacaoService
                     'email'             => $email,
                     'nome'              => $nomeResp,
                     'inscricao'         => null,
+                    'data_referencia'   => $resp->created_at,
                     'etapa_atual'       => $concluido ? 99 : (int) ($resp->etapa_parada ?: 1),
                     'dados_dinamicos'   => $dadosResp,
                     'titulo_formulario' => $formulario->titulo ?? 'Formulário',

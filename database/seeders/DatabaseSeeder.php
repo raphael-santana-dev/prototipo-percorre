@@ -39,7 +39,8 @@ class DatabaseSeeder extends Seeder
             // CentroCustoSeeder::class,
             // NaturezaSeeder::class,
             TarefasAclSeeder::class,
-            FinanceiroPermissionsSeeder::class
+            FinanceiroPermissionsSeeder::class,
+            MenuPermissionsSeeder::class
         ]);
     }
 }

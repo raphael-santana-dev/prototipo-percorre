@@ -1,7 +1,6 @@
 @extends('errors.layout')
 
 @php
-    // Identifica de forma segura se o bloqueio 403 foi causado por uma Feature Toggle desativada ou por Permissão ACL
     $rawMessage = isset($exception) ? mb_strtolower((string) $exception->getMessage(), 'UTF-8') : '';
 
     $isFeatureToggle = str_contains($rawMessage, 'desativad')
@@ -10,7 +9,6 @@
         || str_contains($rawMessage, 'modulo')
         || str_contains($rawMessage, 'temporariamente');
 
-    // Identifica o usuário logado e seu perfil de forma amigável (sem expor dados sensíveis)
     $usuarioNome = null;
     $perfilAtual = null;
 
@@ -28,56 +26,43 @@
 @endphp
 
 @section('title', $isFeatureToggle ? 'Funcionalidade Desativada' : 'Acesso Restrito')
-
-@section('accent_bar', $isFeatureToggle ? 'bg-amber-500' : 'bg-purpura-600')
-
-@section('icon_wrapper', $isFeatureToggle
-    ? 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
-    : 'bg-purpura-50 text-purpura-600 border-purpura-200 dark:bg-purpura-950/40 dark:text-purpura-400 dark:border-purpura-800')
-
-@section('icon', $isFeatureToggle ? 'ph-fill ph-toggle-left' : 'ph-fill ph-shield-Warning')
-
-@section('badge_classes', $isFeatureToggle
-    ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800'
-    : 'bg-purpura-50 text-purpura-700 border-purpura-200 dark:bg-purpura-950/50 dark:text-purpura-300 dark:border-purpura-800')
-
-@section('badge_label', $isFeatureToggle ? 'Módulo Desativado no Sistema' : 'Permissão de Acesso Necessária')
+@section('code', '403')
+@section('badge_label', $isFeatureToggle ? 'Módulo desativado' : 'Acesso restrito')
 
 @section('heading', $isFeatureToggle
     ? 'Esta funcionalidade está temporariamente desativada'
-    : 'Você não possui permissão para acessar esta área')
+    : 'Você não tem permissão para acessar esta área')
 
 @section('message')
     @if($isFeatureToggle)
-        O recurso ou módulo que você tentou acessar encontra-se desligado no momento por definição da administração do sistema.
+        O recurso ou módulo solicitado está desligado no momento por definição da administração do sistema.
     @else
-        O seu perfil de acesso atual não possui a liberação necessária para visualizar esta página ou executar esta operação.
+        O seu perfil de acesso atual não possui a liberação necessária para visualizar esta página ou executar esta ação.
     @endif
 @endsection
 
 @section('extra_content')
-    <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 space-y-2.5 text-xs">
+    <div class="space-y-3 text-xs">
         @if($usuarioNome)
-            <div class="flex items-center justify-between gap-2 pb-2 border-b border-gray-200/80 dark:border-gray-700">
-                <span class="text-gray-500 dark:text-gray-400 font-medium">Conta conectada:</span>
-                <span class="font-bold text-gray-800 dark:text-gray-200 truncate">
-                    {{ $usuarioNome }}
+            <div class="flex items-center justify-between gap-3">
+                <span class="text-gray-500 dark:text-gray-400">Conta conectada</span>
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="font-medium text-gray-900 dark:text-white truncate">{{ $usuarioNome }}</span>
                     @if($perfilAtual)
-                        <span class="ml-1 px-2 py-0.5 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[10px] uppercase text-purpura-600 dark:text-purpura-400">
+                        <span class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-[10px] font-medium uppercase text-gray-600 dark:text-gray-300 shrink-0">
                             {{ $perfilAtual }}
                         </span>
                     @endif
-                </span>
+                </div>
             </div>
         @endif
 
-        <div class="flex items-start gap-2.5 text-gray-600 dark:text-gray-300 leading-relaxed">
-            <i class="ph-fill ph-info text-base {{ $isFeatureToggle ? 'text-amber-500' : 'text-purpura-500' }} shrink-0 mt-0.5"></i>
+        <p class="text-gray-500 dark:text-gray-400 leading-relaxed">
             @if($isFeatureToggle)
-                <span>Caso esta funcionalidade precise ser utilizada agora, solicite ao administrador a ativação da chave correspondente em <strong>Feature Toggles</strong>.</span>
+                Caso precise utilizar este recurso agora, solicite ao administrador a ativação da chave correspondente em <strong class="text-gray-700 dark:text-gray-200 font-medium">Feature Toggles</strong>.
             @else
-                <span>Se você precisa acessar este recurso para realizar suas atividades, solicite à coordenação ou ao administrador a liberação da permissão no seu perfil de acesso.</span>
+                Se você precisa deste acesso para suas atividades, solicite à coordenação ou ao administrador a liberação da permissão no seu perfil.
             @endif
-        </div>
+        </p>
     </div>
 @endsection
