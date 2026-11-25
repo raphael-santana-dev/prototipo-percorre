@@ -23,72 +23,160 @@
         :ordenacaoDirecao="$ordenacaoDirecao"
         :permiteGrid="$permiteGrid"
         :modoExibicao="$modoExibicao">
+
+        <x-slot name="search">
+            <div class="relative w-full sm:w-80 shrink-0">
+                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="text"
+                       wire:model.live.debounce.300ms="filtroBusca"
+                       placeholder="Buscar por nome, e-mail ou Protheus..."
+                       class="w-full pl-9 h-9 bg-white border-gray-200 text-sm rounded-lg focus:ring-1 focus:ring-purpura-500 focus:border-purpura-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white">
+            </div>
+        </x-slot>
+
+        <x-slot name="filters">
+            <div class="flex flex-wrap items-center gap-2">
+                <div class="flex items-center h-9 px-2.5 rounded-lg border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700">
+                    <span class="text-[11px] text-gray-400 mr-1.5">Perfil:</span>
+                    <select wire:model.live="filtroRole" class="border-none shadow-none bg-transparent text-xs font-medium text-gray-700 dark:text-gray-200 focus:ring-0 py-0 pl-1 pr-6 cursor-pointer">
+                        <option value="">Todos</option>
+                        @foreach($roles as $roleOpt)
+                            <option value="{{ $roleOpt->name }}">{{ strtoupper($roleOpt->name) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="flex items-center h-9 px-2.5 rounded-lg border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700">
+                    <span class="text-[11px] text-gray-400 mr-1.5">Escopo:</span>
+                    <select wire:model.live="filtroVinculo" class="border-none shadow-none bg-transparent text-xs font-medium text-gray-700 dark:text-gray-200 focus:ring-0 py-0 pl-1 pr-6 cursor-pointer">
+                        <option value="">Todos</option>
+                        <option value="global">Visão Global</option>
+                        <option value="travado">Travado por Vínculo</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center h-9 px-2.5 rounded-lg border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700">
+                    <span class="text-[11px] text-gray-400 mr-1.5">Ordenar:</span>
+                    <select wire:model.live="ordenacao" class="border-none shadow-none bg-transparent text-xs font-medium text-gray-700 dark:text-gray-200 focus:ring-0 py-0 pl-1 pr-6 cursor-pointer">
+                        <option value="nome_asc">Nome (A-Z)</option>
+                        <option value="nome_desc">Nome (Z-A)</option>
+                        <option value="recentes">Mais Recentes</option>
+                        <option value="antigos">Mais Antigos</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center h-9 px-2.5 rounded-lg border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700">
+                    <span class="text-[11px] text-gray-400 mr-1.5">Exibir:</span>
+                    <select wire:model.live="porPagina" class="border-none shadow-none bg-transparent text-xs font-medium text-gray-700 dark:text-gray-200 focus:ring-0 py-0 pl-1 pr-6 cursor-pointer">
+                        <option value="10">10</option>
+                        <option value="15">15</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+
+                @if($filtroBusca !== '' || $filtroRole !== '' || $filtroVinculo !== '' || $ordenacao !== 'nome_asc')
+                    <button type="button" wire:click="limparFiltros" class="h-9 px-2.5 text-xs font-medium text-gray-500 hover:text-gray-900 dark:hover:text-white transition">
+                        Limpar
+                    </button>
+                @endif
+            </div>
+        </x-slot>
         
         @forelse($registros as $user)
             @php
                 $isTravadoVinculo = $user->possuiTravaPorVinculoAtiva();
                 $combinacoesAtivasUser = $isTravadoVinculo ? $user->obterCombinacoesVinculoAtivas() : [];
+                $extrasCount = $user->permissions->whereNotIn('name', [
+                    'financeiro.visao_global',
+                    'financeiro.visao_global.edicao',
+                    'financeiro.visao_global.aprovacao'
+                ])->count();
+                $temGlobalEdicao = $user->possuiVisaoGlobalCentrosCusto('edicao');
+                $temGlobalAprov  = $user->possuiVisaoGlobalCentrosCusto('aprovacao');
+                $qtdCcEdicao     = $user->centros_de_custo_edicao->count();
+                $qtdCcAprov      = $user->centros_de_custo_aprovacao->count();
             @endphp
-            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                <td class="px-4 py-2.5 whitespace-nowrap">
-                    <div class="text-sm font-bold text-gray-900 dark:text-white">{{ $user->name }}</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $user->email }}</div>
+            <tr wire:key="user-row-{{ $user->id }}" class="transition-colors hover:bg-gray-50/70 dark:hover:bg-gray-700/40">
+                {{-- 1. ID --}}
+                <td class="px-4 py-2.5 whitespace-nowrap text-xs font-mono text-gray-400">
+                    #{{ str_pad($user->id, 3, '0', STR_PAD_LEFT) }}
                 </td>
-                <td class="px-4 py-2.5">
-                    <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
-                        @foreach($user->roles as $role)
-                            <span class="inline-flex px-2 py-0.5 text-[10px] font-bold text-purpura-700 bg-purpura-100 border border-purpura-200 rounded uppercase">
+
+                {{-- 2. Usuário --}}
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ $user->name }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-0.5">
+                        <span>{{ $user->email }}</span>
+                        @if(!empty($user->codigo_protheus))
+                            <span class="px-1.5 py-0.2 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-mono text-gray-600 dark:text-gray-300" title="Código Protheus">
+                                ERP: {{ $user->codigo_protheus }}
+                            </span>
+                        @endif
+                    </div>
+                </td>
+
+                {{-- 3. Perfil & Extras --}}
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        @forelse($user->roles as $role)
+                            <span class="inline-flex px-2 py-0.5 text-[10px] font-bold text-purpura-700 bg-purpura-50 border border-purpura-200 dark:bg-purpura-900/30 dark:border-purpura-800 dark:text-purpura-300 rounded uppercase">
                                 {{ $role->name }}
                             </span>
-                        @endforeach
+                        @empty
+                            <span class="text-xs text-gray-400">Sem perfil</span>
+                        @endforelse
 
-                        @php
-                            $extrasCount = $user->permissions->whereNotIn('name', [
-                                'financeiro.visao_global',
-                                'financeiro.visao_global.edicao',
-                                'financeiro.visao_global.aprovacao'
-                            ])->count();
-                        @endphp
                         @if($extrasCount > 0)
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded">
-                                <i class="ph-bold ph-shield-plus"></i> +{{ $extrasCount }} Extra(s)
-                            </span>
-                        @endif
-                    </div>
-
-                    <div class="text-xs font-semibold text-gray-500 flex flex-wrap gap-1">
-                        @if($isTravadoVinculo)
-                            <span class="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-300">
-                                <i class="ph-fill ph-lock-key"></i> Travado por Vínculo ({{ count($combinacoesAtivasUser) }} combinação/ões ativa/s)
-                            </span>
-                        @else
-                            <span class="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-600 px-1.5 py-0.5 rounded text-[10px] font-bold dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400">
-                                <i class="ph ph-globe"></i> Acadêmico: Global
-                            </span>
-                        @endif
-
-                        @if($user->possuiVisaoGlobalCentrosCusto('edicao'))
-                            <span class="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                                <i class="ph-bold ph-pencil-simple"></i> Edição CC: Global
-                            </span>
-                        @elseif($user->centros_de_custo_edicao->count() > 0)
-                            <span class="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                                <i class="ph-bold ph-pencil-simple"></i> Edição: {{ $user->centros_de_custo_edicao->count() }} CC
-                            </span>
-                        @endif
-
-                        @if($user->possuiVisaoGlobalCentrosCusto('aprovacao'))
-                            <span class="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                                <i class="ph-bold ph-check-square-offset"></i> Aprovação CC: Global
-                            </span>
-                        @elseif($user->centros_de_custo_aprovacao->count() > 0)
-                            <span class="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                                <i class="ph-bold ph-check-square-offset"></i> Aprovação: {{ $user->centros_de_custo_aprovacao->count() }} CC
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-300 rounded" title="{{ $extrasCount }} permissão(ões) avulsa(s)">
+                                +{{ $extrasCount }} extra(s)
                             </span>
                         @endif
                     </div>
                 </td>
+
+                {{-- 4. Escopo Acadêmico --}}
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    @if($isTravadoVinculo)
+                        <span class="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 px-2 py-0.5 rounded text-[11px] font-medium dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-300">
+                            <i class="ph-fill ph-lock-key text-xs"></i>
+                            {{ count($combinacoesAtivasUser) }} vínculo(s)
+                        </span>
+                    @else
+                        <span class="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-700 px-2 py-0.5 rounded text-[11px] font-medium dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300">
+                            <i class="ph ph-globe text-xs"></i>
+                            Global
+                        </span>
+                    @endif
+                </td>
+
+                {{-- 5. Centros de Custo --}}
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    @if($temGlobalEdicao || $qtdCcEdicao > 0 || $temGlobalAprov || $qtdCcAprov > 0)
+                        <div class="flex flex-wrap items-center gap-1">
+                            @if($temGlobalEdicao)
+                                <span class="px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-semibold">Edição: Global</span>
+                            @elseif($qtdCcEdicao > 0)
+                                <span class="px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-semibold">Edição: {{ $qtdCcEdicao }} CC</span>
+                            @endif
+
+                            @if($temGlobalAprov)
+                                <span class="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-semibold">Aprov.: Global</span>
+                            @elseif($qtdCcAprov > 0)
+                                <span class="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-semibold">Aprov.: {{ $qtdCcAprov }} CC</span>
+                            @endif
+                        </div>
+                    @else
+                        <span class="text-xs text-gray-400">—</span>
+                    @endif
+                </td>
+
+                {{-- 6. Cadastro --}}
+                <td class="px-4 py-2.5 whitespace-nowrap text-center text-xs text-gray-500 dark:text-gray-400">
+                    {{ $user->created_at?->format('d/m/Y') ?? '—' }}
+                </td>
                 
+                {{-- 7. Ações --}}
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
                         @if(feature('usuario.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('usuario.visualizar')))
@@ -123,7 +211,11 @@
                 </td>
             </tr>
         @empty
-            <tr><td colspan="3" class="px-4 py-8 text-center text-gray-500">Nenhum usuário cadastrado.</td></tr>
+            <tr>
+                <td colspan="7" class="px-4 py-12 text-center text-xs text-gray-500">
+                    Nenhum usuário encontrado com os filtros aplicados.
+                </td>
+            </tr>
         @endforelse
 
         <x-slot name="gridSlot">

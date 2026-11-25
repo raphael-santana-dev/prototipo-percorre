@@ -78,8 +78,29 @@ class UserManager extends Component
     public array $extraPermissionExpirations = [];
     public string $buscaPermissaoExtra = '';
 
+    // --- FILTROS E ORDENAÇÃO DA LISTAGEM ---
+    public string $filtroBusca = '';
+    public string $filtroRole = '';
+    public string $filtroVinculo = ''; // '', 'travado', 'global'
+    public string $ordenacao = 'nome_asc';
+
     public string $modelClass = User::class;
     public array $breadcrumbs = [];
+
+    public function updating($nomePropriedade): void
+    {
+        if (in_array($nomePropriedade, ['filtroBusca', 'filtroRole', 'filtroVinculo', 'ordenacao', 'porPagina'], true)) {
+            $this->resetPage();
+        }
+    }
+
+    public function limparFiltros(): void
+    {
+        $this->reset(['filtroBusca', 'filtroRole', 'filtroVinculo']);
+        $this->ordenacao = 'nome_asc';
+        $this->ordenacaoCampo = '';
+        $this->resetPage();
+    }
 
     public function mount()
     {
@@ -888,34 +909,103 @@ class UserManager extends Component
     public function getHeadersProperty()
     {
         return [
-            ['key' => 'name', 'label' => 'Nome / E-mail', 'sortable' => true],
-            ['key' => 'roles', 'label' => 'Grupo / Escopo de Vínculos', 'sortable' => false],
-            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
+            ['key' => 'id', 'label' => 'ID', 'sortable' => true, 'class' => 'w-16'],
+            ['key' => 'name', 'label' => 'Usuário', 'sortable' => true],
+            ['key' => 'roles', 'label' => 'Perfil & Extras', 'sortable' => false],
+            ['key' => 'escopo', 'label' => 'Escopo Acadêmico', 'sortable' => false],
+            ['key' => 'financeiro', 'label' => 'Centros de Custo', 'sortable' => false],
+            ['key' => 'created_at', 'label' => 'Cadastro', 'sortable' => true, 'class' => 'w-28 text-center'],
+            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right w-36'],
         ];
     }
 
     public function render()
     {
-        $query = User::query()->with(['roles', 'unidades', 'centros_de_custo', 'centros_de_custo_edicao', 'centros_de_custo_aprovacao', 'permissions']);
+        $query = User::query()->with([
+            'roles',
+            'unidades',
+            'centros_de_custo',
+            'centros_de_custo_edicao',
+            'centros_de_custo_aprovacao',
+            'permissions',
+        ]);
 
-        if ($this->ordenacaoCampo) {
+        if (trim($this->filtroBusca) !== '') {
+            $termo = '%' . trim($this->filtroBusca) . '%';
+            $query->where(function ($q) use ($termo) {
+                $q->where('name', 'ilike', $termo)
+                  ->orWhere('email', 'ilike', $termo)
+                  ->orWhere('codigo_protheus', 'ilike', $termo);
+            });
+        }
+
+        if ($this->filtroRole !== '') {
+            $query->whereHas('roles', fn($q) => $q->where('name', $this->filtroRole));
+        }
+
+        if ($this->filtroVinculo !== '' && Schema::hasColumn('users', 'travar_por_vinculo')) {
+            if ($this->filtroVinculo === 'travado') {
+                $query->where('travar_por_vinculo', true);
+            } elseif ($this->filtroVinculo === 'global') {
+                $query->where(function ($q) {
+                    $q->where('travar_por_vinculo', false)->orWhereNull('travar_por_vinculo');
+                });
+            }
+        }
+
+        if ($this->ordenacaoCampo && in_array($this->ordenacaoCampo, ['id', 'name', 'email', 'created_at'], true)) {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
         } else {
-            $query->orderBy('name', 'asc');
+            match ($this->ordenacao) {
+                'nome_desc' => $query->orderBy('name', 'desc'),
+                'recentes'  => $query->orderBy('id', 'desc'),
+                'antigos'   => $query->orderBy('id', 'asc'),
+                default     => $query->orderBy('name', 'asc'),
+            };
         }
 
         $permissoesQuery = CustomPermission::orderBy('module')->orderBy('name');
         if (!empty(trim($this->buscaPermissaoExtra))) {
-            $termo = '%' . trim($this->buscaPermissaoExtra) . '%';
-            $permissoesQuery->where(function ($q) use ($termo) {
-                $q->where('name', 'ilike', $termo)
-                  ->orWhere('description', 'ilike', $termo)
-                  ->orWhere('module', 'ilike', $termo);
+            $termoPerm = '%' . trim($this->buscaPermissaoExtra) . '%';
+            $permissoesQuery->where(function ($q) use ($termoPerm) {
+                $q->where('name', 'ilike', $termoPerm)
+                  ->orWhere('description', 'ilike', $termoPerm)
+                  ->orWhere('module', 'ilike', $termoPerm);
             });
         }
 
+        $totalUsuarios = User::count();
+        $totalTravados = Schema::hasColumn('users', 'travar_por_vinculo')
+            ? User::where('travar_por_vinculo', true)->count()
+            : 0;
+
+        $metricas = [
+            [
+                'label'      => 'Total de Usuários',
+                'value'      => $totalUsuarios,
+                'color_text' => 'text-purpura-600 dark:text-purpura-400',
+                'color_bg'   => 'bg-purpura-100 dark:bg-purpura-900/30',
+                'icon'       => '<i class="ph-fill ph-users text-xl text-purpura-600"></i>',
+            ],
+            [
+                'label'      => 'Visão Global',
+                'value'      => max(0, $totalUsuarios - $totalTravados),
+                'color_text' => 'text-blue-600 dark:text-blue-400',
+                'color_bg'   => 'bg-blue-100 dark:bg-blue-900/30',
+                'icon'       => '<i class="ph-fill ph-globe text-xl text-blue-600"></i>',
+            ],
+            [
+                'label'      => 'Travados por Vínculo',
+                'value'      => $totalTravados,
+                'color_text' => 'text-amber-600 dark:text-amber-400',
+                'color_bg'   => 'bg-amber-100 dark:bg-amber-900/30',
+                'icon'       => '<i class="ph-fill ph-lock-key text-xl text-amber-600"></i>',
+            ],
+        ];
+
         return view('livewire.corporate.user-manager', [
             'registros'           => $query->paginate($this->porPagina),
+            'metricas'            => $metricas,
             'roles'               => Role::orderBy('name')->get(),
             'todasUnidades'       => Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get(),
             'cursosDb'            => Curso::with(['unidades', 'turnosVinculados'])->whereIn('status', ['Ativo', '1', true])->orderBy('nome')->get(),
