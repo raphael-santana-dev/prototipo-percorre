@@ -1,3 +1,9 @@
+@php
+    $u = auth()->user();
+    $isDev = $u?->hasRole('dev') ?? false;
+    $pode = fn(string $chave) => feature($chave) && ($isDev || ($u && $u->can($chave)));
+@endphp
+
 <div class="p-6 max-w-7xl mx-auto font-sans relative" x-data="{ abaAtiva: 'geral' }" wire:poll.5s="pingLock">
 
     <x-editing-lock-overlay
@@ -24,7 +30,7 @@
                     </p>
                 </div>
             </div>
-            @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+            @if($pode('inscricao.ciclo.encerrar'))
                 <button type="button" wire:click="toggleEncerrado" class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shrink-0 transition shadow-2xs flex items-center gap-1.5">
                     <i class="ph-bold ph-lock-key-open"></i> Reabrir Edição do Ciclo
                 </button>
@@ -40,24 +46,30 @@
         
             <x-slot name="actions">
                 <div class="flex items-center gap-2 flex-wrap justify-end">
-                    @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                    @if($pode('inscricao.ciclo.encerrar'))
                         <button type="button" wire:click="toggleEncerrado" class="btn btn--secondary btn--small {{ $encerrado ? '!bg-amber-50 !border-amber-300 !text-amber-800' : '' }}">
                             <i class="ph-fill {{ $encerrado ? 'ph-lock-key-open' : 'ph-archive' }} text-sm"></i>
                             {{ $encerrado ? 'Reabrir Ciclo' : 'Encerrar Edição do Ciclo' }}
                         </button>
                     @endif
 
-                    <a href="{{ route('ciclos.show', $cicloId) }}" class="btn btn--secondary btn--small !bg-purpura-50 !border-purpura-200 !text-purpura-700">
-                        <i class="ph-bold ph-eye text-sm"></i> Ver Detalhes
-                    </a>
+                    @if($pode('inscricao.ciclo.detalhar'))
+                        <a href="{{ route('ciclos.show', $cicloId) }}" class="btn btn--secondary btn--small !bg-purpura-50 !border-purpura-200 !text-purpura-700">
+                            <i class="ph-bold ph-eye text-sm"></i> Ver Detalhes
+                        </a>
+                    @endif
 
-                    <a href="{{ route('ciclos.regras', $cicloId) }}" class="btn btn--secondary btn--small !bg-ponkan-50 !border-ponkan-200 !text-ponkan-700">
-                        <i class="ph-bold ph-star text-sm"></i> Editar Regras
-                    </a>
+                    @if($pode('inscricao.ciclo.regras'))
+                        <a href="{{ route('ciclos.regras', $cicloId) }}" class="btn btn--secondary btn--small !bg-ponkan-50 !border-ponkan-200 !text-ponkan-700">
+                            <i class="ph-bold ph-star text-sm"></i> Editar Regras
+                        </a>
+                    @endif
 
-                    <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $cicloId]) }}" class="btn btn--secondary btn--small">
-                        <i class="ph-bold ph-list-dashes text-sm"></i> Construtor (Campos)
-                    </a>
+                    @if($pode('inscricao.ciclo.construir'))
+                        <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $cicloId]) }}" class="btn btn--secondary btn--small">
+                            <i class="ph-bold ph-list-dashes text-sm"></i> Construtor (Campos)
+                        </a>
+                    @endif
                     
                     <a href="{{ route('ciclos.index') }}" wire:navigate class="btn btn--secondary btn--small ml-2">
                         <i class="ph-bold ph-arrow-left text-sm"></i> Voltar
@@ -163,12 +175,14 @@
                 </div>
                 
                 <div class="space-y-3 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <div class="flex items-center">
-                        <input type="checkbox" wire:model="status" id="status" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
-                        <label for="status" class="block ml-2 text-xs font-bold text-gray-900 dark:text-gray-300 cursor-pointer">
-                            Ativar este ciclo imediatamente {{ $tipo_ciclo === 'regular' ? '(desativará outros ciclos regulares ativos)' : '(projetos customizados não desativam o ciclo regular)' }}
-                        </label>
-                    </div>
+                    @if($pode('inscricao.ciclo.status'))
+                        <div class="flex items-center">
+                            <input type="checkbox" wire:model="status" id="status" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                            <label for="status" class="block ml-2 text-xs font-bold text-gray-900 dark:text-gray-300 cursor-pointer">
+                                Ativar este ciclo imediatamente {{ $tipo_ciclo === 'regular' ? '(desativará outros ciclos regulares ativos)' : '(projetos customizados não desativam o ciclo regular)' }}
+                            </label>
+                        </div>
+                    @endif
 
                     <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 space-y-4">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -329,7 +343,7 @@
                             Defina a quantidade de vagas, meta e restrições de idade para cada combinação selecionada.
                         </p>
                     </div>
-                    @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                    @if($pode('inscricao.ciclo.editar'))
                         <button type="button" wire:click="addOferta" class="px-3.5 py-2 bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-300 dark:border-purpura-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
                             <i class="ph-bold ph-plus text-sm"></i> Adicionar Linha Manual
                         </button>
@@ -400,7 +414,7 @@
                                 <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_max" min="0" placeholder="Livre" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-semibold text-center">
                             </div>
 
-                            @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                            @if($pode('inscricao.ciclo.editar'))
                                 <div class="w-full xl:w-auto">
                                     <button type="button" wire:click="removeOferta({{ $index }})" class="w-full xl:w-auto p-2 bg-white dark:bg-gray-800 text-red-500 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-center shadow-sm hover:bg-red-500 hover:text-white transition" title="Remover Oferta">
                                         <i class="ph-bold ph-trash text-base"></i>
@@ -498,7 +512,7 @@
                         </p>
                     </div>
 
-                    @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                    @if($pode('inscricao.ciclo.editar'))
                         <button type="button" wire:click="addDocumento" class="px-3.5 py-2 bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-300 dark:border-purpura-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
                             <i class="ph-bold ph-plus text-sm"></i> Novo Documento
                         </button>
@@ -549,7 +563,7 @@
                                     <span class="ml-2 text-xs font-bold text-gray-700 dark:text-gray-300">Obrigatório</span>
                                 </label>
 
-                                @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                                @if($pode('inscricao.ciclo.editar'))
                                     <button type="button" wire:click="removeDocumento({{ $index }})" class="p-2 bg-white dark:bg-gray-800 text-red-500 border border-red-200 dark:border-red-800 rounded-lg shadow-sm hover:bg-red-500 hover:text-white transition" title="Remover Documento">
                                         <i class="ph-bold ph-trash text-base"></i>
                                     </button>
@@ -566,7 +580,7 @@
                 </div>
             </div>
 
-            @if(!$encerrado)
+            @if(!$encerrado && $pode('inscricao.ciclo.editar'))
                 <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mt-6">
                     <span class="text-xs text-gray-500 dark:text-gray-400 font-medium"></span>
                     <button type="submit" class="btn btn--primary btn--large uppercase tracking-wider">

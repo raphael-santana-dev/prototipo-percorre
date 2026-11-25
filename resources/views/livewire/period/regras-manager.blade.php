@@ -1,3 +1,9 @@
+@php
+    $u = auth()->user();
+    $isDev = $u?->hasRole('dev') ?? false;
+    $pode = fn(string $chave) => feature($chave) && ($isDev || ($u && $u->can($chave)));
+@endphp
+
 <div class="p-6 max-w-[1400px] mx-auto h-full flex flex-col font-sans relative" wire:poll.5s="pingLock">
     
     {{-- CORTINA DE BLOQUEIO: OUTRO UTILIZADOR A EDITAR --}}
@@ -57,7 +63,7 @@
                 <h2 class="text-2xl font-bold text-gray-900 dark:text-white mt-1">Regras de Pontuação</h2>
                 <p class="text-gray-500 text-sm">Configurando pontuação automatizada para o ciclo <span class="font-bold text-purpura-600">{{ $ciclo->nome }}</span>.</p>
             </div>
-            @if(feature('ciclo.regras') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.regras')))
+            @if($pode('inscricao.ciclo.regras'))
                 <div class="flex items-center gap-3">
                     <button wire:click="salvar" class="flex items-center gap-2 px-5 py-2.5 text-white transition-colors rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 font-bold text-sm">
                         <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Regras
@@ -156,7 +162,7 @@
                             @error("regras.$index.pontos") <span class="text-[9px] text-red-500 font-bold mt-1 block leading-tight">{{ $message }}</span> @enderror
                         </div>
 
-                        @if(feature('ciclo.regras') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.regras')))
+                        @if($pode('inscricao.ciclo.regras'))
                             <div class="w-full md:w-10 shrink-0 text-right md:text-center mt-1 md:mt-0">
                                 <button type="button" wire:click="removeRegra({{ $index }})" class="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded transition" title="Excluir">
                                     <i class="ph-bold ph-trash text-base"></i>
@@ -168,7 +174,7 @@
             </div>
 
             <div class="p-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 flex justify-center">
-                @if(feature('ciclo.regras') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.regras')))
+                @if($pode('inscricao.ciclo.regras'))
                     <button type="button" wire:click="addRegra" class="text-sm font-bold text-purpura-600 hover:text-purpura-800 transition flex items-center gap-1">
                         <i class="ph-bold ph-plus"></i> Adicionar Nova Regra
                     </button>

@@ -8,12 +8,13 @@ use Livewire\Attributes\Title;
 use App\Models\Ciclo;
 use App\Models\CampoFormulario;
 use App\Traits\WithEditingLock;
+use App\Traits\ValidaAcesso;
 
 #[Layout('components.layouts.app')]
 #[Title('Regras de Pontuação')]
 class RegrasManager extends Component
 {
-    use WithEditingLock;
+    use WithEditingLock, ValidaAcesso;
 
     public Ciclo $ciclo;
     public array $regras = [];
@@ -23,8 +24,7 @@ class RegrasManager extends Component
 
     public function mount($id, ?string $slug = null)
     {
-        //abort_if(!feature('ciclo.regras'), 403, 'Construtor de regras desativado.');
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.regras'), 403, 'Acesso restrito.');
+        $this->autorizarTela('inscricao.ciclo.regras', 'regras de pontuação do ciclo');
 
         $this->ciclo = Ciclo::findOrFail($id);
 
@@ -91,6 +91,10 @@ class RegrasManager extends Component
 
     public function addRegra()
     {
+        if (!$this->autorizarAcao('inscricao.ciclo.regras', 'adicionar regra de pontuação')) {
+            return;
+        }
+
         if ($this->isLockedByOther) return;
 
         $this->regras[] = [
@@ -105,6 +109,10 @@ class RegrasManager extends Component
 
     public function removeRegra($index)
     {
+        if (!$this->autorizarAcao('inscricao.ciclo.regras', 'remover regra de pontuação')) {
+            return;
+        }
+
         if ($this->isLockedByOther) return;
 
         unset($this->regras[$index]);
@@ -113,8 +121,9 @@ class RegrasManager extends Component
 
     public function salvar()
     {
-        //abort_if(!feature('ciclo.regras'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.regras'), 403);
+        if (!$this->autorizarAcao('inscricao.ciclo.regras', 'salvar regras de pontuação')) {
+            return;
+        }
 
         if ($this->isLockedByOther) {
             $this->dispatch('erro', msg: 'Edição bloqueada por outro utilizador.');
@@ -175,6 +184,10 @@ class RegrasManager extends Component
 
     public function confirmarRecalculo(): void
     {
+        if (!$this->autorizarAcao('inscricao.ciclo.regras', 'recalcular pontuação e ranking do ciclo')) {
+            return;
+        }
+
         $trackingScore = \App\Models\SystemTask::create([
             'user_id'            => auth()->id(),
             'tipo'               => 'inscricoes',

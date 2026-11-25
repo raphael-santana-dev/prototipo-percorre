@@ -14,13 +14,14 @@ use App\Models\CampoFormulario;
 use Livewire\WithPagination;
 use App\Traits\ComPadraoListagem;
 use App\Traits\WithToggleStatus;
+use App\Traits\ValidaAcesso;
 use App\Helpers\BreadcrumbHelper;
 
 #[Layout('components.layouts.app')]
 #[Title('Detalhes do Ciclo')]
 class PeriodDetails extends Component
 {
-    use WithPagination, ComPadraoListagem, WithToggleStatus {
+    use WithPagination, ComPadraoListagem, WithToggleStatus, ValidaAcesso {
         WithToggleStatus::toggleStatus as traitToggleStatus;
     }
 
@@ -50,8 +51,7 @@ class PeriodDetails extends Component
 
     public function mount($id, ?string $slug = null)
     {
-        //abort_if(!feature('ciclo.visualizar'), 403, 'A visualização de ciclos está desativada.');
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.visualizar'), 403, 'Acesso restrito.');
+        $this->autorizarTela('inscricao.ciclo.detalhar', 'detalhes do ciclo');
 
         $this->ciclo = Ciclo::with(['cursos', 'unidades', 'turnos', 'fases'])->findOrFail($id);
         
@@ -65,8 +65,9 @@ class PeriodDetails extends Component
 
     public function toggleStatus($id)
     {
-        //abort_if(!feature('ciclo.editar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
+        if (!$this->autorizarAcao('inscricao.ciclo.status', 'alterar status do ciclo')) {
+            return;
+        }
 
         $ciclo = Ciclo::findOrFail($id);
         $novoStatus = !$ciclo->status;
@@ -136,6 +137,10 @@ class PeriodDetails extends Component
 
     public function criarAcessosEmLote(): void
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.criar_acesso', 'criar acessos de estudante em lote')) {
+            return;
+        }
+
         if (empty($this->selecionadas)) {
             $this->dispatch('erro', msg: 'Selecione pelo menos uma inscrição.');
             return;
@@ -169,8 +174,9 @@ class PeriodDetails extends Component
     #[On('quick-change-status')]
     public function alterarStatusQuickView($id, $status)
     {
-        //abort_if(!feature('inscricao.editar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+        if (!$this->autorizarAcao('inscricao.inscritos.status', 'alterar status da inscrição')) {
+            return;
+        }
 
         $inscricao = Inscricao::find($id);
         if ($inscricao) {
@@ -182,6 +188,10 @@ class PeriodDetails extends Component
 
     public function gerarLinkRetomada(int $id)
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.retomar', 'gerar link de retomada de inscrição')) {
+            return;
+        }
+
         $inscricao = Inscricao::findOrFail($id);
         $token = \Illuminate\Support\Facades\Crypt::encrypt($inscricao->id);
         $urlRetomada = route('inscricao.retomar', ['token' => $token]);
@@ -192,22 +202,33 @@ class PeriodDetails extends Component
 
     public function showQuickView(int $id)
     {
-        $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])->findOrFail($id);
-        $statusDisponiveis = StatusInscricao::orderBy('nome')->get();
-        $botoesAcao = '<div class="flex flex-wrap gap-2 mt-2">';
-        
-        foreach($statusDisponiveis as $st) {
-            $corClass = $st->id == $inscricao->status_inscricao_id 
-                        ? 'bg-purpura-500 text-white border-purpura-500' 
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700';
-            $botoesAcao .= '<button @click="$dispatch(\'quick-change-status\', { id: '.$id.', status: '.$st->id.' })" class="px-3 py-1.5 text-[11px] uppercase font-bold border rounded shadow-sm transition-colors '.$corClass.'">'.$st->nome.'</button>';
+        if (!$this->autorizarAcao('inscricao.inscritos.visualizar', 'visualizar ficha rápida da inscrição')) {
+            return;
         }
-        $botoesAcao .= '</div>';
+
+        $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])->findOrFail($id);
+        $podeAlterarStatus = feature('inscricao.inscritos.status') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.inscritos.status'));
+
+        if ($podeAlterarStatus) {
+            $statusDisponiveis = StatusInscricao::orderBy('nome')->get();
+            $botoesAcao = '<div class="flex flex-wrap gap-2 mt-2">';
+
+            foreach ($statusDisponiveis as $st) {
+                $corClass = $st->id == $inscricao->status_inscricao_id
+                    ? 'bg-purpura-500 text-white border-purpura-500'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700';
+                $botoesAcao .= '<button @click="$dispatch(\'quick-change-status\', { id: '.$id.', status: '.$st->id.' })" class="px-3 py-1.5 text-[11px] uppercase font-bold border rounded shadow-sm transition-colors '.$corClass.'">'.$st->nome.'</button>';
+            }
+            $botoesAcao .= '</div>';
+        } else {
+            $statusNome = e($inscricao->statusInscricao->nome ?? 'Pendente');
+            $botoesAcao = '<span class="inline-block px-2.5 py-1 text-[11px] uppercase font-bold rounded border bg-gray-100 text-gray-700 border-gray-200">'.$statusNome.'</span>';
+        }
 
         $detalhesDinamicos = '';
-        if($inscricao->dados_dinamicos) {
+        if ($inscricao->dados_dinamicos) {
             $detalhesDinamicos .= '<div class="mt-2 grid grid-cols-1 gap-2">';
-            foreach($inscricao->dados_dinamicos as $chave => $valor) {
+            foreach ($inscricao->dados_dinamicos as $chave => $valor) {
                 $valorFormatado = is_array($valor) ? implode(', ', $valor) : $valor;
                 $detalhesDinamicos .= '<div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700"><span class="block text-[10px] uppercase text-gray-500 font-bold">'.str_replace('_', ' ', $chave).'</span><span class="text-sm font-medium text-gray-900 dark:text-gray-200">'.($valorFormatado ?: '-').'</span></div>';
             }
@@ -216,25 +237,42 @@ class PeriodDetails extends Component
             $detalhesDinamicos = '<span class="text-gray-500 text-sm italic">Nenhum dado complementar.</span>';
         }
 
+        $dadosQuickView = [
+            'Status do Candidato'       => $botoesAcao,
+            'Interesse Acadêmico'       => '<div class="text-sm"><b>Unidade:</b> '.($inscricao->unidade->nome ?? '-').'<br><b>Curso:</b> '.($inscricao->curso->nome ?? '-').'<br><b>Turno:</b> '.($inscricao->turno->nome ?? '-').'</div>',
+            'Informações do Formulário' => $detalhesDinamicos,
+            'Pontuação'                 => '<span class="font-bold text-purpura-600 text-2xl">'.$inscricao->pontuacao_total.' pts</span>',
+        ];
+
+        if (feature('inscricao.inscritos.detalhar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.inscritos.detalhar'))) {
+            $dadosQuickView['Ações Extras'] = '<a href="'.route('inscricoes.show', $inscricao->id).'" class="font-bold text-purpura-600 hover:underline">Ver Auditoria Completa</a>';
+        }
+
         $this->dispatch('load-quick-view', [
-            'title' => $inscricao->nome,
+            'title'    => $inscricao->nome,
             'subtitle' => 'CPF: ' . $inscricao->cpf . ' • ' . $inscricao->email,
-            'icon' => 'ph-user-focus',
-            'data' => [
-                'Status do Candidato' => $botoesAcao,
-                'Interesse Acadêmico' => '<div class="text-sm"><b>Unidade:</b> '.($inscricao->unidade->nome ?? '-').'<br><b>Curso:</b> '.($inscricao->curso->nome ?? '-').'<br><b>Turno:</b> '.($inscricao->turno->nome ?? '-').'</div>',
-                'Informações do Formulário' => $detalhesDinamicos,
-                'Pontuação' => '<span class="font-bold text-purpura-600 text-2xl">'.$inscricao->pontuacao_total.' pts</span>',
-                'Ações Extras' => '<a href="'.route('inscricoes.show', $inscricao->id).'" class="font-bold text-purpura-600 hover:underline">Ver Auditoria Completa</a>'
-            ]
+            'icon'     => 'ph-user-focus',
+            'data'     => $dadosQuickView,
         ]);
     }
 
-    public function selecionarQuantidade($quantidade) { $this->selecionadas = $this->obterQueryFiltrada()->limit($quantidade)->pluck('id')->map(fn($id) => (string) $id)->toArray(); }
+    public function selecionarQuantidade($quantidade)
+    {
+        if (!$this->autorizarAcao('inscricao.inscritos.selecionar', 'selecionar inscrições em lote')) {
+            return;
+        }
+
+        $this->selecionadas = $this->obterQueryFiltrada()->limit($quantidade)->pluck('id')->map(fn($id) => (string) $id)->toArray();
+    }
+
     public function desmarcarTodas() { $this->selecionadas = []; }
     
     public function abrirModalLote()
     {
+        if (!$this->autorizarAcao('inscricao.inscritos.status', 'alterar status de inscrições em lote')) {
+            return;
+        }
+
         if (count($this->selecionadas) === 0) return;
         $this->novoStatusId = '';
         $this->modalLoteAberto = true;
@@ -242,8 +280,9 @@ class PeriodDetails extends Component
 
     public function salvarStatusEmLote()
     {
-        //abort_if(!feature('inscricao.editar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+        if (!$this->autorizarAcao('inscricao.inscritos.status', 'alterar status de inscrições em lote')) {
+            return;
+        }
 
         $this->validate(['novoStatusId' => 'required', 'selecionadas' => 'required|array|min:1']);
         $inscricoes = Inscricao::whereIn('id', $this->selecionadas)->get();
@@ -255,8 +294,9 @@ class PeriodDetails extends Component
 
     public function alterarStatusLoteRapido($statusId)
     {
-        //abort_if(!feature('inscricao.editar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+        if (!$this->autorizarAcao('inscricao.inscritos.status', 'alterar status de inscrições em lote')) {
+            return;
+        }
         
         if (count($this->selecionadas) === 0) return;
         $inscricoes = Inscricao::whereIn('id', $this->selecionadas)->get();
@@ -267,8 +307,9 @@ class PeriodDetails extends Component
 
     public function recalcularPontuacoes()
     {
-        //abort_if(!feature('inscricao.editar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+        if (!$this->autorizarAcao('inscricao.ciclo.regras', 'recalcular pontuações do ciclo')) {
+            return;
+        }
         
         $trackingScore = \App\Models\SystemTask::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'recalculo', 'formato' => 'system',
@@ -290,8 +331,9 @@ class PeriodDetails extends Component
 
     public function gerarRanking()
     {
-        //abort_if(!feature('inscricao.editar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+        if (!$this->autorizarAcao('inscricao.ciclo.regras', 'gerar ranking do ciclo')) {
+            return;
+        }
 
         $tracking = \App\Models\SystemTask::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',

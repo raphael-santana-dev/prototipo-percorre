@@ -16,12 +16,13 @@ use App\Modules\Matricula\Domain\Models\DocumentoMatricula;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use App\Traits\WithEditingLock;
+use App\Traits\ValidaAcesso;
 
 #[Layout('components.layouts.app')]
 #[Title('Editar Ciclo - Administrativo')]
 class PeriodEdit extends Component
 {
-    use WithEditingLock;
+    use WithEditingLock, ValidaAcesso;
 
     public $cicloId, $nome, $ano, $semestre, $data_inicio, $data_fim, $status;
     public bool $encerrado = false;
@@ -53,6 +54,8 @@ class PeriodEdit extends Component
 
     public function mount($id)
     {
+        $this->autorizarTela('inscricao.ciclo.editar', 'edição do ciclo');
+
         $ciclo = Ciclo::with(['unidades', 'cursos', 'turnos', 'statusPipeline'])->findOrFail($id);
         
         $this->cicloId = $ciclo->id;
@@ -304,6 +307,10 @@ class PeriodEdit extends Component
 
     public function atualizarOrdemStatus($ordemIds) 
     { 
+        if (!$this->autorizarAcao('inscricao.ciclo.editar', 'reordenar etapas do ciclo')) {
+            return;
+        }
+
         $this->statusSelecionados = $ordemIds; 
         
         $syncStatus = [];
@@ -313,6 +320,10 @@ class PeriodEdit extends Component
 
     public function removerStatusPipeline($id) 
     { 
+        if (!$this->autorizarAcao('inscricao.ciclo.editar', 'remover etapa do ciclo')) {
+            return;
+        }
+
         $emUso = \App\Models\Inscricao::where('ciclo_id', $this->cicloId)->where('status_inscricao_id', $id)->exists();
         if ($emUso) {
             $this->dispatch('erro', msg: 'Ação Bloqueada: Já existem inscrições neste ciclo vinculadas a este status.');
@@ -350,6 +361,10 @@ class PeriodEdit extends Component
 
     public function removeDocumento($index)
     {
+        if (!$this->autorizarAcao('inscricao.ciclo.editar', 'remover documento exigido do ciclo')) {
+            return;
+        }
+
         $docId = $this->documentosExigidos[$index]['id'] ?? null;
         if ($docId) {
             $emUso = DocumentoMatricula::where('documento_exigido_id', $docId)->exists();
@@ -365,6 +380,10 @@ class PeriodEdit extends Component
 
     public function toggleEncerrado(): void
     {
+        if (!$this->autorizarAcao('inscricao.ciclo.encerrar', 'encerrar ou reabrir edição do ciclo')) {
+            return;
+        }
+
         $ciclo = Ciclo::findOrFail($this->cicloId);
         $this->encerrado = !($ciclo->encerrado ?? false);
         $ciclo->update(['encerrado' => $this->encerrado]);
@@ -376,6 +395,10 @@ class PeriodEdit extends Component
 
     public function salvar()
     {
+        if (!$this->autorizarAcao('inscricao.ciclo.editar', 'salvar alterações do ciclo')) {
+            return;
+        }
+
         if ($this->isLockedByOther) {
             $this->dispatch('erro', msg: "Este ciclo está sendo editado por {$this->lockOwnerName}.");
             return;
@@ -413,13 +436,17 @@ class PeriodEdit extends Component
             'slug_projeto.regex'                 => 'O slug deve conter apenas letras minúsculas, números e hífens.',
         ]);
 
-        if ($this->status && $this->tipo_ciclo === 'regular') {
+        $cicloSalvo = Ciclo::findOrFail($this->cicloId);
+        $podeAlterarStatus = feature('inscricao.ciclo.status')
+            && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.ciclo.status'));
+        $statusFinal = $podeAlterarStatus ? (bool) $this->status : (bool) $cicloSalvo->status;
+
+        if ($podeAlterarStatus && $statusFinal && $this->tipo_ciclo === 'regular') {
             Ciclo::where('tipo_ciclo', 'regular')
                 ->where('id', '!=', $this->cicloId)
                 ->update(['status' => false]);
         }
 
-        $cicloSalvo = Ciclo::findOrFail($this->cicloId);
         $dadosUpdateCiclo = [
             'nome'                  => empty(trim($this->nome)) ? "{$this->ano} - {$this->semestre}º Semestre" : $this->nome,
             'tipo_ciclo'            => $this->tipo_ciclo,
@@ -428,7 +455,7 @@ class PeriodEdit extends Component
             'semestre'              => $this->semestre,
             'data_inicio'           => $this->data_inicio,
             'data_fim'              => $this->data_fim,
-            'status'                => $this->status,
+            'status'                => $statusFinal,
             'data_inicio_matricula' => !empty($this->data_inicio_matricula) ? $this->data_inicio_matricula : null,
             'data_fim_matricula'    => !empty($this->data_fim_matricula) ? $this->data_fim_matricula : null,
         ];
