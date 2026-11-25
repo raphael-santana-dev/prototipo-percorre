@@ -229,20 +229,28 @@
                     </div>
                 </td>
                 
+                {{-- 4. Em Edição --}}
+                <td class="px-4 py-2 whitespace-nowrap text-center">
+                    <x-editing-lock-badge
+                        :id="$ciclo->id"
+                        :tipos="[
+                            'ciclo_dados'  => 'Ciclo',
+                            'ciclo'        => 'Formulário',
+                            'ciclo_regras' => 'Regras',
+                        ]" />
+                </td>
+
+                {{-- 5. Abertura --}}
                 <td class="px-4 py-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300">
                     {{ $ciclo->data_inicio->format('d/m/Y H:i') }}
                 </td>
 
+                {{-- 6. Encerramento --}}
                 <td class="px-4 py-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300">
                     {{ $ciclo->data_fim->format('d/m/Y H:i') }}
                 </td>
                 
-                <td class="px-4 py-2 whitespace-nowrap text-center">
-                    <span class="px-2 py-0.5 text-xs font-medium text-gray-700 bg-gray-100 rounded border border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700">
-                        {{ $ciclo->inscricoes_count ?? 0 }} inscritos
-                    </span>
-                </td>
-                
+                {{-- 7. Captação (Meta) --}}
                 <td class="px-4 py-2 whitespace-nowrap">
                     @php
                         $totalMeta = $ciclo->total_meta ?? 0;
@@ -260,7 +268,27 @@
                         </div>
                     </div>
                 </td>
+
+                {{-- 8. Ocupação (Vagas) --}}
+                <td class="px-4 py-2 whitespace-nowrap">
+                    @php
+                        $totalVagas = $ciclo->total_vagas ?? 0;
+                        $preenchidas = $ciclo->vagas_preenchidas ?? 0;
+                        $percentualVagas = $totalVagas > 0 ? round(($preenchidas / $totalVagas) * 100, 1) : 0;
+                        $corBarraVagas = $percentualVagas >= 100 ? 'bg-red-500' : ($percentualVagas >= 80 ? 'bg-orange-500' : 'bg-emerald-500');
+                    @endphp
+                    <div class="flex flex-col items-center justify-center w-full min-w-[120px]">
+                        <div class="flex justify-between w-full text-[10px] font-medium mb-1">
+                            <span class="text-gray-500">{{ $preenchidas }} ocup.</span>
+                            <span class="text-gray-700 dark:text-gray-300">{{ $totalVagas }} vagas</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden flex">
+                            <div class="{{ $corBarraVagas }} h-1.5 rounded-full transition-all duration-500" style="width: {{ min($percentualVagas, 100) }}%"></div>
+                        </div>
+                    </div>
+                </td>
                 
+                {{-- 9. Bloqueio --}}
                 <td class="px-4 py-2 whitespace-nowrap text-center">
                     @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
                         <div class="inline-flex items-center justify-center gap-1.5">
@@ -278,16 +306,6 @@
                             {{ $ciclo->encerrado ? 'Encerrado' : ($ciclo->bloqueado ? 'Bloqueado' : 'Aberto') }}
                         </span>
                     @endif
-                </td>
-
-                <td class="px-4 py-2 whitespace-nowrap text-center">
-                    <x-editing-lock-badge
-                        :id="$ciclo->id"
-                        :tipos="[
-                            'ciclo_dados'  => 'Ciclo',
-                            'ciclo'        => 'Formulário',
-                            'ciclo_regras' => 'Regras',
-                        ]" />
                 </td>
 
                 <td class="px-4 py-2 whitespace-nowrap">
