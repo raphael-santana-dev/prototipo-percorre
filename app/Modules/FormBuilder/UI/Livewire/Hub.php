@@ -13,11 +13,13 @@ use App\Models\Etapa;
 use App\Models\FormularioFase;
 use App\Models\CicloAprendizagem;
 use App\Traits\WithEditingLock;
+use App\Traits\ValidaAcesso;
 
 #[Layout('components.layouts.app')]
 #[Title('Central de Formulários')]
 class Hub extends Component
 {
+    use ValidaAcesso;
     public $modalCicloAberto = false;
     public $modalAprendizagemAberto = false;
     public $modalVincularAberto = false;
@@ -40,8 +42,23 @@ class Hub extends Component
     public array $fasesVinculoDisponiveis = [];
     public bool $publicarAoVincular = true;
 
+    private function resolverSufixoTipoForm(Formulario $form): string
+    {
+        if ($form->tipo === 'aprendizagem') {
+            return 'form_aprendizagem';
+        }
+
+        if ($form->tipo === 'ciclo' || !empty($form->ciclo_id)) {
+            return 'form_ciclo';
+        }
+
+        return 'form_geral';
+    }
+
     public function mount()
     {
+        $this->autorizarTela('instituicao.formbuilder.acessar', 'central de formulários (Form Builder)');
+
         $this->ciclos = Ciclo::orderBy('id', 'desc')->get();
         $this->unidades = \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get();
         $this->cursos = \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', true])->orderBy('nome')->get();
@@ -50,6 +67,10 @@ class Hub extends Component
 
     public function selecionarCicloSeletivo($cicloId)
     {
+        if (!$this->autorizarAcao('instituicao.formbuilder.criar_form_ciclo', 'criar ou abrir formulário de ciclo')) {
+            return null;
+        }
+
         return redirect()->route('construtor.campos', ['tipo' => 'ciclo', 'id' => $cicloId]);
     }
 
@@ -69,6 +90,10 @@ class Hub extends Component
 
     public function criarFormularioAprendizagem()
     {
+        if (!$this->autorizarAcao('instituicao.formbuilder.criar_form_aprendizagem', 'criar formulário de aprendizagem')) {
+            return null;
+        }
+
         $isRascunho = (bool) ($this->aprendizagem['is_rascunho'] ?? false);
 
         if (empty($this->aprendizagem['fase_id'])) {
@@ -102,6 +127,10 @@ class Hub extends Component
 
     public function criarFormularioAvulsoRascunho()
     {
+        if (!$this->autorizarAcao('instituicao.formbuilder.criar_form_geral', 'criar rascunho de formulário geral')) {
+            return null;
+        }
+
         $hash = substr(md5(uniqid()), 0, 6);
 
         $form = Formulario::create([
@@ -119,6 +148,11 @@ class Hub extends Component
     public function abrirModalVincular(int $id)
     {
         $form = Formulario::with('faseAprendizagem')->findOrFail($id);
+        $sufixo = $this->resolverSufixoTipoForm($form);
+
+        if (!$this->autorizarAcao("instituicao.formbuilder.vincular_{$sufixo}", 'vincular formulário')) {
+            return;
+        }
 
         $this->formVincularId = $form->id;
         $this->formVincularTitulo = $form->titulo;
@@ -144,6 +178,15 @@ class Hub extends Component
     public function salvarVinculoFormulario()
     {
         $form = Formulario::with('campos')->findOrFail($this->formVincularId);
+        $sufixoDestino = match ($this->destinoVinculo) {
+            'ciclo_inscricao' => 'form_ciclo',
+            'aprendizagem'    => 'form_aprendizagem',
+            default           => 'form_geral',
+        };
+
+        if (!$this->autorizarAcao("instituicao.formbuilder.vincular_{$sufixoDestino}", 'salvar vínculo do formulário')) {
+            return;
+        }
 
         if ($this->destinoVinculo === 'ciclo_inscricao') {
             $this->validate([
@@ -259,6 +302,11 @@ class Hub extends Component
     public function alternarStatusRascunho(int $id)
     {
         $form = Formulario::findOrFail($id);
+        $sufixo = $this->resolverSufixoTipoForm($form);
+
+        if (!$this->autorizarAcao("instituicao.formbuilder.publicar_{$sufixo}", 'publicar ou despublicar formulário')) {
+            return;
+        }
 
         if ($form->is_rascunho && $form->tipo === 'aprendizagem' && empty($form->ciclo_aprendizagem_fase_id)) {
             $this->abrirModalVincular($form->id);

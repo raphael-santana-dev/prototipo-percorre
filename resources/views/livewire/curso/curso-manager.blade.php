@@ -1,3 +1,9 @@
+@php
+    $u = auth()->user();
+    $isDev = $u?->hasRole('dev') ?? false;
+    $pode = fn(string $chave) => feature($chave) && ($isDev || ($u && $u->can($chave)));
+@endphp
+
 <div class="w-full relative">
 
     <x-page-header 
@@ -8,11 +14,13 @@
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
 
-        <x-slot name="actions">
-            <button wire:click="openModal" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none">
-                <i class="ph ph-plus"></i> Novo Curso
-            </button>
-        </x-slot>
+        @if($pode('instituicao.cursos.criar'))
+            <x-slot name="actions">
+                <button wire:click="openModal" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none">
+                    <i class="ph ph-plus"></i> Novo Curso
+                </button>
+            </x-slot>
+        @endif
     </x-page-header>
 
     <x-table
@@ -50,34 +58,54 @@
                 </td>
 
                 <td class="px-4 py-3 whitespace-nowrap">
-                    <button type="button" wire:click="showQuickView({{ $curso->id }})" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 transition">
-                        <span>{{ $curso->unidades_count ?? $curso->unidades()->count() }} unidade(s)</span>
-                    </button>
+                    @if($pode('instituicao.cursos.visualizar'))
+                        <button type="button" wire:click="showQuickView({{ $curso->id }})" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 transition">
+                            <span>{{ $curso->unidades_count ?? $curso->unidades()->count() }} unidade(s)</span>
+                        </button>
+                    @else
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+                            {{ $curso->unidades_count ?? $curso->unidades()->count() }} unidade(s)
+                        </span>
+                    @endif
                 </td>
 
                 <td class="px-4 py-3 whitespace-nowrap">
-                    <div class="flex items-center gap-2">
-                        <x-toggle :status="$isAtivo" action="toggleStatus({{ $curso->id }})" />
-                        <span class="text-[11px] font-medium {{ $isAtivo ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400' }}">
+                    @if($pode('instituicao.cursos.status'))
+                        <div class="flex items-center gap-2">
+                            <x-toggle :status="$isAtivo" action="toggleStatus({{ $curso->id }})" />
+                            <span class="text-[11px] font-medium {{ $isAtivo ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400' }}">
+                                {{ $isAtivo ? 'Ativo' : 'Inativo' }}
+                            </span>
+                        </div>
+                    @else
+                        <span class="px-2 py-0.5 text-[11px] font-medium rounded border {{ $isAtivo ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-500 border-gray-200' }}">
                             {{ $isAtivo ? 'Ativo' : 'Inativo' }}
                         </span>
-                    </div>
+                    @endif
                 </td>
 
                 <td class="px-4 py-3 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
-                        <button wire:click="showQuickView({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Visualização Rápida">
-                            <i class="text-base ph ph-info"></i>
-                        </button>
-                        <a href="{{ route('cursos.show', $curso->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Página Completa">
-                            <i class="text-base ph ph-eye"></i>
-                        </a>
-                        <button wire:click="edit({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Editar Curso">
-                            <i class="text-base ph ph-pencil-simple"></i>
-                        </button>
-                        <button wire:click="delete({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-800" title="Excluir" onclick="confirm('Tem certeza que deseja excluir este curso?') || event.stopImmediatePropagation()">
-                            <i class="text-base ph ph-trash"></i>
-                        </button>
+                        @if($pode('instituicao.cursos.visualizar'))
+                            <button wire:click="showQuickView({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Visualização Rápida">
+                                <i class="text-base ph ph-info"></i>
+                            </button>
+                        @endif
+                        @if($pode('instituicao.cursos.detalhar'))
+                            <a href="{{ route('cursos.show', $curso->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Página Completa">
+                                <i class="text-base ph ph-eye"></i>
+                            </a>
+                        @endif
+                        @if($pode('instituicao.cursos.editar'))
+                            <button wire:click="edit({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Editar Curso">
+                                <i class="text-base ph ph-pencil-simple"></i>
+                            </button>
+                        @endif
+                        @if($pode('instituicao.cursos.excluir'))
+                            <button wire:click="delete({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-800" title="Excluir" onclick="confirm('Tem certeza que deseja excluir este curso?') || event.stopImmediatePropagation()">
+                                <i class="text-base ph ph-trash"></i>
+                            </button>
+                        @endif
                     </div>
                 </td>
             </tr>
@@ -102,14 +130,27 @@
                         <div>{{ $curso->permite_estado_diferente ? 'Aceita alunos de outra UF' : 'Apenas UF local' }}</div>
                     </div>
                     <div class="flex items-center justify-between mt-auto pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <div class="flex items-center gap-2">
-                            <x-toggle :status="$isAtivoCard" action="toggleStatus({{ $curso->id }})" />
-                            <span class="text-[11px] font-medium {{ $isAtivoCard ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400' }}">{{ $isAtivoCard ? 'Ativo' : 'Inativo' }}</span>
-                        </div>
+                        @if($pode('instituicao.cursos.status'))
+                            <div class="flex items-center gap-2">
+                                <x-toggle :status="$isAtivoCard" action="toggleStatus({{ $curso->id }})" />
+                                <span class="text-[11px] font-medium {{ $isAtivoCard ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400' }}">{{ $isAtivoCard ? 'Ativo' : 'Inativo' }}</span>
+                            </div>
+                        @else
+                            <span class="px-2 py-0.5 text-[11px] font-medium rounded border {{ $isAtivoCard ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-500 border-gray-200' }}">{{ $isAtivoCard ? 'Ativo' : 'Inativo' }}</span>
+                        @endif
                         <div class="flex items-center gap-1">
-                            <button wire:click="showQuickView({{ $curso->id }})" class="p-1.5 text-gray-400 hover:text-gray-900 rounded"><i class="text-base ph ph-info"></i></button>
-                            <button wire:click="edit({{ $curso->id }})" class="p-1.5 text-gray-400 hover:text-gray-900 rounded"><i class="text-base ph ph-pencil-simple"></i></button>
-                            <button wire:click="delete({{ $curso->id }})" class="p-1.5 text-gray-400 hover:text-red-600 rounded" onclick="confirm('Excluir este curso permanentemente?') || event.stopImmediatePropagation()"><i class="text-base ph ph-trash"></i></button>
+                            @if($pode('instituicao.cursos.visualizar'))
+                                <button wire:click="showQuickView({{ $curso->id }})" class="p-1.5 text-gray-400 hover:text-gray-900 rounded" title="Visualização Rápida"><i class="text-base ph ph-info"></i></button>
+                            @endif
+                            @if($pode('instituicao.cursos.detalhar'))
+                                <a href="{{ route('cursos.show', $curso->id) }}" class="p-1.5 text-gray-400 hover:text-gray-900 rounded" title="Página Completa"><i class="text-base ph ph-eye"></i></a>
+                            @endif
+                            @if($pode('instituicao.cursos.editar'))
+                                <button wire:click="edit({{ $curso->id }})" class="p-1.5 text-gray-400 hover:text-gray-900 rounded" title="Editar"><i class="text-base ph ph-pencil-simple"></i></button>
+                            @endif
+                            @if($pode('instituicao.cursos.excluir'))
+                                <button wire:click="delete({{ $curso->id }})" class="p-1.5 text-gray-400 hover:text-red-600 rounded" title="Excluir" onclick="confirm('Excluir este curso permanentemente?') || event.stopImmediatePropagation()"><i class="text-base ph ph-trash"></i></button>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -135,7 +176,7 @@
 
                     <div class="md:col-span-4">
                         <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-                        <select wire:model="status" class="w-full">
+                        <select wire:model="status" @disabled($isEditMode && !$pode('instituicao.cursos.status')) class="w-full disabled:opacity-60 disabled:cursor-not-allowed">
                             <option value="Ativo">Ativo</option>
                             <option value="Inativo">Inativo</option>
                         </select>

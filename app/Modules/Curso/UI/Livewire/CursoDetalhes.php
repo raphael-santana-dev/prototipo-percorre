@@ -8,18 +8,20 @@ use Livewire\Attributes\Title;
 use Livewire\Attributes\Computed;
 use App\Models\Curso;
 use App\Models\User;
+use App\Traits\ValidaAcesso;
 
 #[Layout('components.layouts.app')]
 #[Title('Detalhes do Curso - Administrativo')]
 class CursoDetalhes extends Component
 {
+    use ValidaAcesso;
+
     public int $cursoId;
 
     public function mount(int $id)
     {
-        //abort_if(!feature('curso.visualizar'), 403, 'O módulo de visualização de cursos está temporariamente desativado no sistema.');
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.visualizar'), 403, 'Você não tem acesso aos detalhes do curso.');
-        $this->cursoId = $id; 
+        $this->autorizarTela('instituicao.cursos.detalhar', 'detalhes do curso');
+        $this->cursoId = $id;
     }
 
     #[Computed]

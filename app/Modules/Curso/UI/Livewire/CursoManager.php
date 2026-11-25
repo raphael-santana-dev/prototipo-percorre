@@ -10,6 +10,7 @@ use Livewire\WithPagination;
 use App\Helpers\BreadcrumbHelper;
 use App\Traits\ComPadraoListagem;
 use App\Traits\WithToggleStatus;
+use App\Traits\ValidaAcesso;
 use App\Models\Curso;
 use App\Modules\Unidade\Domain\Models\Unidade;
 use App\Modules\Turno\Domain\Models\Turno;
@@ -21,7 +22,9 @@ use Illuminate\Support\Facades\Schema;
 #[Title('Gerenciar Cursos - Administrativo')]
 class CursoManager extends Component
 {
-    use WithPagination, ComPadraoListagem, WithToggleStatus;
+    use WithPagination, ComPadraoListagem, WithToggleStatus, ValidaAcesso {
+        WithToggleStatus::toggleStatus as traitToggleStatus;
+    }
 
     public bool $showModal = false;
     public bool $isEditMode = false;
@@ -45,8 +48,18 @@ class CursoManager extends Component
 
     public function mount()
     {
+        $this->autorizarTela('instituicao.cursos.listar', 'gerenciamento de cursos');
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
+    }
+
+    public function toggleStatus($id): void
+    {
+        if (!$this->autorizarAcao('instituicao.cursos.status', 'alterar status do curso')) {
+            return;
+        }
+
+        $this->traitToggleStatus($id);
     }
 
     public function updatingFiltroBusca()
@@ -136,6 +149,10 @@ class CursoManager extends Component
 
     public function openModal(): void
     {
+        if (!$this->autorizarAcao('instituicao.cursos.criar', 'cadastrar novo curso')) {
+            return;
+        }
+
         $this->resetInputFields();
         $primeiraUnidade = Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->first();
         if ($primeiraUnidade) {
@@ -152,16 +169,30 @@ class CursoManager extends Component
 
     public function save(CursoService $service)
     {
+        $chave = $this->isEditMode ? 'instituicao.cursos.editar' : 'instituicao.cursos.criar';
+        if (!$this->autorizarAcao($chave, $this->isEditMode ? 'atualizar curso' : 'cadastrar curso')) {
+            return;
+        }
+
         $this->validate([
             'nome'                     => 'required|string|max:255',
             'status'                   => 'required',
             'permite_estado_diferente' => 'boolean',
         ]);
 
+        $statusFinal = $this->status;
+        if ($this->isEditMode) {
+            $podeStatus = feature('instituicao.cursos.status')
+                && (auth()->user()->hasRole('dev') || auth()->user()->can('instituicao.cursos.status'));
+            if (!$podeStatus) {
+                $statusFinal = $service->buscarPorId($this->cursoId)->status;
+            }
+        }
+
         $dados = [
             'nome'                     => $this->nome,
             'slug'                     => Str::slug($this->nome),
-            'status'                   => $this->status,
+            'status'                   => $statusFinal,
             'permite_estado_diferente' => $this->permite_estado_diferente,
         ];
 
@@ -219,6 +250,10 @@ class CursoManager extends Component
 
     public function edit(CursoService $service, int $id)
     {
+        if (!$this->autorizarAcao('instituicao.cursos.editar', 'editar curso')) {
+            return;
+        }
+
         $this->resetInputFields();
         $curso = $service->buscarPorId($id);
         $curso->load(['unidades', 'turnosVinculados']);
@@ -260,6 +295,10 @@ class CursoManager extends Component
 
     public function delete(CursoService $service, int $id)
     {
+        if (!$this->autorizarAcao('instituicao.cursos.excluir', 'excluir curso')) {
+            return;
+        }
+
         if (Schema::hasTable('unidade_curso_turno')) {
             DB::table('unidade_curso_turno')->where('curso_id', $id)->delete();
         }
@@ -277,6 +316,10 @@ class CursoManager extends Component
 
     public function showQuickView(CursoService $service, int $id)
     {
+        if (!$this->autorizarAcao('instituicao.cursos.visualizar', 'visualizar detalhes rápidos do curso')) {
+            return;
+        }
+
         $curso = $service->buscarPorId($id);
         $curso->load(['unidades', 'turnosVinculados']);
 

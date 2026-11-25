@@ -6,12 +6,14 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\AuditoriaLog;
 use App\Traits\ComPadraoListagem;
+use App\Traits\ValidaAcesso;
 use App\Helpers\BreadcrumbHelper;
 
 class AuditoriaManager extends Component
 {
     use WithPagination;
     use ComPadraoListagem;
+    use ValidaAcesso;
 
     public array $breadcrumbs = [];
 
@@ -23,8 +25,7 @@ class AuditoriaManager extends Component
 
     public function mount()
     {
-        //abort_if(!feature('auditoria.listar'), 403, 'O módulo de logs está temporariamente desativado no sistema.');
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('auditoria.listar'), 403, 'Você não tem permissão para listar os logs.');
+        $this->autorizarTela('administracao.auditoria.listar', 'auditoria do sistema');
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
     }
@@ -56,8 +57,9 @@ class AuditoriaManager extends Component
 
     public function showQuickView(int $id)
     {
-        //abort_if(!feature('auditoria.visualizar'), 403, 'A visualização de detalhes está desativada.');
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('auditoria.visualizar'), 403, 'Você não tem permissão para visualizar o log.');
+        if (!$this->autorizarAcao('administracao.auditoria.visualizar', 'visualizar detalhes do log de auditoria')) {
+            return;
+        }
 
         $log = AuditoriaLog::findOrFail($id);
 

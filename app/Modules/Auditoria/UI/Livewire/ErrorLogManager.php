@@ -9,12 +9,13 @@ use Livewire\Attributes\Title;
 use App\Models\ErrorLog;
 use Illuminate\Support\Facades\Schema;
 use App\Traits\ComPadraoListagem;
+use App\Traits\ValidaAcesso;
 
 #[Layout('components.layouts.app')]
 #[Title('Central de Exceções e Erros')]
 class ErrorLogManager extends Component
 {
-    use WithPagination, ComPadraoListagem;
+    use WithPagination, ComPadraoListagem, ValidaAcesso;
 
     public $filtroTipo = '';
     public $filtroCodigo = '';
@@ -27,6 +28,11 @@ class ErrorLogManager extends Component
     public $erroOcorrencias = null;
     public array $listaOcorrenciasModal = [];
     public bool $modalOcorrenciasAberto = false;
+
+    public function mount(): void
+    {
+        $this->autorizarTela('administracao.central_erros.acessar', 'central de exceções e erros');
+    }
 
     public function updating($nomePropriedade)
     {
@@ -44,6 +50,10 @@ class ErrorLogManager extends Component
 
     public function verDetalhes($id)
     {
+        if (!$this->autorizarAcao('administracao.central_erros.acessar', 'visualizar detalhes do erro')) {
+            return;
+        }
+
         $this->errorDetalhes = ErrorLog::with('user')->findOrFail($id);
         $this->modalDetalhesAberto = true;
     }
@@ -56,6 +66,10 @@ class ErrorLogManager extends Component
 
     public function verOcorrencias($id)
     {
+        if (!$this->autorizarAcao('administracao.central_erros.acessar', 'visualizar histórico de ocorrências')) {
+            return;
+        }
+
         $log = ErrorLog::with('user')->findOrFail($id);
         $this->erroOcorrencias = $log;
 
@@ -88,6 +102,10 @@ class ErrorLogManager extends Component
 
     public function alternarResolvido($id)
     {
+        if (!$this->autorizarAcao('administracao.central_erros.acessar', 'alterar estado do erro')) {
+            return;
+        }
+
         $log = ErrorLog::findOrFail($id);
         $novoEstadoResolvido = !$log->resolvido;
 
@@ -108,12 +126,20 @@ class ErrorLogManager extends Component
 
     public function eliminarErro($id)
     {
+        if (!$this->autorizarAcao('administracao.central_erros.acessar', 'excluir registro de erro')) {
+            return;
+        }
+
         ErrorLog::findOrFail($id)->delete();
         $this->dispatch('sucesso', msg: 'Registo de erro removido.');
     }
 
     public function limparTodos()
     {
+        if (!$this->autorizarAcao('administracao.central_erros.acessar', 'limpar histórico de erros')) {
+            return;
+        }
+
         ErrorLog::truncate();
         $this->dispatch('sucesso', msg: 'Todos os registos de erros foram limpos.');
     }

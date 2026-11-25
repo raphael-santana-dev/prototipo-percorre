@@ -1,3 +1,9 @@
+@php
+    $u = auth()->user();
+    $isDev = $u?->hasRole('dev') ?? false;
+    $pode = fn(string $chave) => feature($chave) && ($isDev || ($u && $u->can($chave)));
+@endphp
+
 <div class="w-full relative space-y-6 font-sans" wire:poll.8s>
     
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 dark:border-gray-800 pb-4">
@@ -10,48 +16,56 @@
             </p>
         </div>
 
-        <button type="button" wire:click="criarFormularioAvulsoRascunho" class="px-3.5 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700 rounded-md text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition shrink-0">
-            <i class="ph ph-plus"></i> Novo rascunho livre
-        </button>
+        @if($pode('instituicao.formbuilder.criar_form_geral'))
+            <button type="button" wire:click="criarFormularioAvulsoRascunho" class="px-3.5 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700 rounded-md text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition shrink-0">
+                <i class="ph ph-plus"></i> Novo rascunho livre
+            </button>
+        @endif
     </div>
 
     {{-- 3 FLUXOS DE CRIAÇÃO (NEUTROS E DIRETOS) --}}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        
-        <button type="button" wire:click="$set('modalCicloAberto', true)" class="text-left bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600 p-5 flex flex-col transition group">
-            <div class="flex items-center justify-between w-full mb-2">
-                <span class="text-sm font-semibold text-gray-900 dark:text-white">Inscrição Oficial</span>
-                <i class="ph ph-calendar-check text-lg text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200"></i>
-            </div>
-            <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4 flex-1">
-                Vinculado a um Ciclo Seletivo (Regular ou Projeto), com pontuação, ranking e ficha oficial.
-            </p>
-            <span class="text-xs font-semibold text-purpura-600 dark:text-purpura-400 group-hover:underline">Selecionar ciclo →</span>
-        </button>
+    @if($pode('instituicao.formbuilder.criar_form_ciclo') || $pode('instituicao.formbuilder.criar_form_aprendizagem') || $pode('instituicao.formbuilder.criar_form_geral'))
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            @if($pode('instituicao.formbuilder.criar_form_ciclo'))
+                <button type="button" wire:click="$set('modalCicloAberto', true)" class="text-left bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600 p-5 flex flex-col transition group">
+                    <div class="flex items-center justify-between w-full mb-2">
+                        <span class="text-sm font-semibold text-gray-900 dark:text-white">Inscrição Oficial</span>
+                        <i class="ph ph-calendar-check text-lg text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200"></i>
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4 flex-1">
+                        Vinculado a um Ciclo Seletivo (Regular ou Projeto), com pontuação, ranking e ficha oficial.
+                    </p>
+                    <span class="text-xs font-semibold text-purpura-600 dark:text-purpura-400 group-hover:underline">Selecionar ciclo →</span>
+                </button>
+            @endif
 
-        <button type="button" wire:click="$set('modalAprendizagemAberto', true)" class="text-left bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600 p-5 flex flex-col transition group">
-            <div class="flex items-center justify-between w-full mb-2">
-                <span class="text-sm font-semibold text-gray-900 dark:text-white">Avaliação de Aprendizagem</span>
-                <i class="ph ph-graduation-cap text-lg text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200"></i>
-            </div>
-            <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4 flex-1">
-                Formulários vinculados a ciclos e fases do fluxo de Aprendizagem, ou salvos em rascunho.
-            </p>
-            <span class="text-xs font-semibold text-purpura-600 dark:text-purpura-400 group-hover:underline">Criar avaliação →</span>
-        </button>
+            @if($pode('instituicao.formbuilder.criar_form_aprendizagem'))
+                <button type="button" wire:click="$set('modalAprendizagemAberto', true)" class="text-left bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600 p-5 flex flex-col transition group">
+                    <div class="flex items-center justify-between w-full mb-2">
+                        <span class="text-sm font-semibold text-gray-900 dark:text-white">Avaliação de Aprendizagem</span>
+                        <i class="ph ph-graduation-cap text-lg text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200"></i>
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4 flex-1">
+                        Formulários vinculados a ciclos e fases do fluxo de Aprendizagem, ou salvos em rascunho.
+                    </p>
+                    <span class="text-xs font-semibold text-purpura-600 dark:text-purpura-400 group-hover:underline">Criar avaliação →</span>
+                </button>
+            @endif
 
-        <a href="{{ route('formularios.create') }}" class="text-left bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600 p-5 flex flex-col transition group">
-            <div class="flex items-center justify-between w-full mb-2">
-                <span class="text-sm font-semibold text-gray-900 dark:text-white">Formulário Geral</span>
-                <i class="ph ph-list-dashes text-lg text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200"></i>
-            </div>
-            <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4 flex-1">
-                Pesquisas, questionários públicos (/f/slug) ou modelos livres para vincular depois.
-            </p>
-            <span class="text-xs font-semibold text-purpura-600 dark:text-purpura-400 group-hover:underline">Criar formulário →</span>
-        </a>
-
-    </div>
+            @if($pode('instituicao.formbuilder.criar_form_geral'))
+                <a href="{{ route('formularios.create') }}" class="text-left bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600 p-5 flex flex-col transition group">
+                    <div class="flex items-center justify-between w-full mb-2">
+                        <span class="text-sm font-semibold text-gray-900 dark:text-white">Formulário Geral</span>
+                        <i class="ph ph-list-dashes text-lg text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200"></i>
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4 flex-1">
+                        Pesquisas, questionários públicos (/f/slug) ou modelos livres para vincular depois.
+                    </p>
+                    <span class="text-xs font-semibold text-purpura-600 dark:text-purpura-400 group-hover:underline">Criar formulário →</span>
+                </a>
+            @endif
+        </div>
+    @endif
 
     {{-- LISTAGEM DE FORMULÁRIOS POR ABA --}}
     <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
@@ -73,13 +87,25 @@
             @forelse($formulariosList ?? [] as $formItem)
                 @php
                     $locksFormHub = \App\Traits\WithEditingLock::obterLocksAtivos($formItem->id, ['formulario' => 'Formulário']);
+                    $sufixoForm = $formItem->tipo === 'aprendizagem'
+                        ? 'form_aprendizagem'
+                        : (($formItem->tipo === 'ciclo' || !empty($formItem->ciclo_id)) ? 'form_ciclo' : 'form_geral');
+                    $chaveConstruir = $sufixoForm === 'form_ciclo'
+                        ? 'inscricao.ciclo.construir'
+                        : "instituicao.formbuilder.construir_{$sufixoForm}";
                 @endphp
                 <div wire:key="hub-form-{{ $formItem->id }}" class="p-4 sm:px-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition">
                     <div class="space-y-1 min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
-                            <a href="{{ route('formularios.show', $formItem->id) }}" class="font-semibold text-sm text-gray-900 hover:text-purpura-600 dark:text-white truncate">
-                                {{ $formItem->titulo }}
-                            </a>
+                            @if($pode("instituicao.formbuilder.respostas_{$sufixoForm}"))
+                                <a href="{{ route('formularios.show', $formItem->id) }}" class="font-semibold text-sm text-gray-900 hover:text-purpura-600 dark:text-white truncate">
+                                    {{ $formItem->titulo }}
+                                </a>
+                            @else
+                                <span class="font-semibold text-sm text-gray-900 dark:text-white truncate">
+                                    {{ $formItem->titulo }}
+                                </span>
+                            @endif
                             <span class="px-2 py-0.5 text-[11px] font-medium rounded border {{ $formItem->is_rascunho ? 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700' : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800' }}">
                                 {{ $formItem->is_rascunho ? 'Rascunho' : 'Publicado' }}
                             </span>
@@ -106,31 +132,41 @@
                     </div>
 
                     <div class="flex flex-wrap items-center gap-1.5 shrink-0">
-                        @if(auth()->user()->hasAnyRole(['dev', 'admin']) || auth()->user()->can('formulario.testar') || auth()->user()->can('inscricao.criar'))
+                        @if($pode($chaveConstruir) || $pode("instituicao.formbuilder.editar_{$sufixoForm}"))
                             <a href="{{ url('/f/' . $formItem->slug . '?modo=teste') }}" target="_blank" class="px-2.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-md text-xs font-medium transition" title="Testar em Sandbox">
                                 Testar
                             </a>
                         @endif
 
-                        <a href="{{ route('formularios.show', $formItem->id) }}" class="px-2.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-md text-xs font-medium transition">
-                            Respostas
-                        </a>
+                        @if($pode("instituicao.formbuilder.respostas_{$sufixoForm}"))
+                            <a href="{{ route('formularios.show', $formItem->id) }}" class="px-2.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-md text-xs font-medium transition">
+                                Respostas
+                            </a>
+                        @endif
 
-                        <button type="button" wire:click="abrirModalVincular({{ $formItem->id }})" class="px-2.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-md text-xs font-medium transition">
-                            Vincular
-                        </button>
+                        @if($pode("instituicao.formbuilder.vincular_{$sufixoForm}"))
+                            <button type="button" wire:click="abrirModalVincular({{ $formItem->id }})" class="px-2.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-md text-xs font-medium transition">
+                                Vincular
+                            </button>
+                        @endif
 
-                        <a href="{{ route('formularios.edit', $formItem->id) }}" class="px-2.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-md text-xs font-medium transition" title="Configurações">
-                            <i class="ph ph-gear text-sm align-middle"></i>
-                        </a>
+                        @if($pode("instituicao.formbuilder.editar_{$sufixoForm}"))
+                            <a href="{{ route('formularios.edit', $formItem->id) }}" class="px-2.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-md text-xs font-medium transition" title="Configurações">
+                                <i class="ph ph-gear text-sm align-middle"></i>
+                            </a>
+                        @endif
 
-                        <button type="button" wire:click="alternarStatusRascunho({{ $formItem->id }})" class="px-2.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-md text-xs font-medium transition">
-                            {{ $formItem->is_rascunho ? 'Publicar' : 'Despublicar' }}
-                        </button>
+                        @if($pode("instituicao.formbuilder.publicar_{$sufixoForm}"))
+                            <button type="button" wire:click="alternarStatusRascunho({{ $formItem->id }})" class="px-2.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-md text-xs font-medium transition">
+                                {{ $formItem->is_rascunho ? 'Publicar' : 'Despublicar' }}
+                            </button>
+                        @endif
 
-                        <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $formItem->id]) }}" class="px-3 py-1.5 bg-purpura-600 hover:bg-purpura-700 text-white rounded-md text-xs font-semibold transition">
-                            Construtor
-                        </a>
+                        @if($pode($chaveConstruir))
+                            <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $formItem->id]) }}" class="px-3 py-1.5 bg-purpura-600 hover:bg-purpura-700 text-white rounded-md text-xs font-semibold transition">
+                                Construtor
+                            </a>
+                        @endif
                     </div>
                 </div>
             @empty
@@ -261,9 +297,15 @@
                     <div>
                         <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Destino <span class="text-red-500">*</span></label>
                         <select wire:model.live="destinoVinculo" class="w-full text-sm rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                            <option value="geral">Formulário Público Geral (/f/slug)</option>
-                            <option value="ciclo_inscricao">Aplicar Campos a um Ciclo de Inscrição (/inscricao)</option>
-                            <option value="aprendizagem">Vincular a Ciclo / Fase de Aprendizagem</option>
+                            @if($pode('instituicao.formbuilder.vincular_form_geral'))
+                                <option value="geral">Formulário Público Geral (/f/slug)</option>
+                            @endif
+                            @if($pode('instituicao.formbuilder.vincular_form_ciclo'))
+                                <option value="ciclo_inscricao">Aplicar Campos a um Ciclo de Inscrição (/inscricao)</option>
+                            @endif
+                            @if($pode('instituicao.formbuilder.vincular_form_aprendizagem'))
+                                <option value="aprendizagem">Vincular a Ciclo / Fase de Aprendizagem</option>
+                            @endif
                         </select>
                     </div>
 

@@ -1,3 +1,9 @@
+@php
+    $u = auth()->user();
+    $isDev = $u?->hasRole('dev') ?? false;
+    $pode = fn(string $chave) => feature($chave) && ($isDev || ($u && $u->can($chave)));
+@endphp
+
 <div class="w-full relative">
     
     <x-page-header 
@@ -5,14 +11,16 @@
         subtitle="Monitoramento agrupado de falhas, recorrências e stack traces do sistema"
         icon="ph ph-bug"
         badge="">
-        <x-slot name="actions">
-            <button type="button"
-                    wire:click="limparTodos"
-                    class="btn btn--secondary btn--medium !text-red-600 !border-red-200 hover:!bg-red-50"
-                    onclick="confirm('Tem a certeza que deseja limpar todos os logs de erros?') || event.stopImmediatePropagation()">
-                <i class="ph ph-trash"></i> Limpar Histórico
-            </button>
-        </x-slot>
+        @if($pode('administracao.central_erros.acessar'))
+            <x-slot name="actions">
+                <button type="button"
+                        wire:click="limparTodos"
+                        class="btn btn--secondary btn--medium !text-red-600 !border-red-200 hover:!bg-red-50"
+                        onclick="confirm('Tem a certeza que deseja limpar todos os logs de erros?') || event.stopImmediatePropagation()">
+                    <i class="ph ph-trash"></i> Limpar Histórico
+                </button>
+            </x-slot>
+        @endif
 
         <x-slot name="filters">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-3 w-full">
@@ -121,20 +129,22 @@
                             </td>
 
                             <td class="px-4 py-3 text-right whitespace-nowrap">
-                                <div class="inline-flex items-center justify-end gap-1">
-                                    <button type="button" wire:click="verOcorrencias({{ $log->id }})" class="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-700 rounded transition" title="Ver Histórico de Ocorrências">
-                                        <i class="ph ph-list-bullets text-base"></i>
-                                    </button>
-                                    <button type="button" wire:click="verDetalhes({{ $log->id }})" class="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-700 rounded transition" title="Ver Stack Trace Completo">
-                                        <i class="ph ph-eye text-base"></i>
-                                    </button>
-                                    <button type="button" wire:click="alternarResolvido({{ $log->id }})" class="p-1.5 {{ $log->resolvido ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50' }} rounded transition" title="{{ $log->resolvido ? 'Reabrir Erro' : 'Marcar como Resolvido' }}">
-                                        <i class="ph {{ $log->resolvido ? 'ph-arrow-counter-clockwise' : 'ph-check-circle' }} text-base"></i>
-                                    </button>
-                                    <button type="button" wire:click="eliminarErro({{ $log->id }})" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition" title="Eliminar Registo">
-                                        <i class="ph ph-trash text-base"></i>
-                                    </button>
-                                </div>
+                                @if($pode('administracao.central_erros.acessar'))
+                                    <div class="inline-flex items-center justify-end gap-1">
+                                        <button type="button" wire:click="verOcorrencias({{ $log->id }})" class="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-700 rounded transition" title="Ver Histórico de Ocorrências">
+                                            <i class="ph ph-list-bullets text-base"></i>
+                                        </button>
+                                        <button type="button" wire:click="verDetalhes({{ $log->id }})" class="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-700 rounded transition" title="Ver Stack Trace Completo">
+                                            <i class="ph ph-eye text-base"></i>
+                                        </button>
+                                        <button type="button" wire:click="alternarResolvido({{ $log->id }})" class="p-1.5 {{ $log->resolvido ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50' }} rounded transition" title="{{ $log->resolvido ? 'Reabrir Erro' : 'Marcar como Resolvido' }}">
+                                            <i class="ph {{ $log->resolvido ? 'ph-arrow-counter-clockwise' : 'ph-check-circle' }} text-base"></i>
+                                        </button>
+                                        <button type="button" wire:click="eliminarErro({{ $log->id }})" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition" title="Eliminar Registo">
+                                            <i class="ph ph-trash text-base"></i>
+                                        </button>
+                                    </div>
+                                @endif
                             </td>
                         </tr>
                     @empty

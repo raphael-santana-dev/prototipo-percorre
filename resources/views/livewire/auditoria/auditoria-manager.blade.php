@@ -1,3 +1,9 @@
+@php
+    $u = auth()->user();
+    $isDev = $u?->hasRole('dev') ?? false;
+    $pode = fn(string $chave) => feature($chave) && ($isDev || ($u && $u->can($chave)));
+@endphp
+
 <div class="w-full relative">
     <x-page-header 
         title="Auditoria de Sistema" 
@@ -131,7 +137,7 @@
                 </td>
                 <td class="px-4 py-3 text-right whitespace-nowrap">
                     <div class="flex items-center justify-end gap-1">
-                        @if(feature('auditoria.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('auditoria.visualizar')))
+                        @if($pode('administracao.auditoria.visualizar'))
                             <button wire:click="showQuickView({{ $log->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Ver Detalhes do Log">
                                 <i class="text-base ph ph-info"></i>
                             </button>
@@ -170,7 +176,7 @@
                         <div class="text-xs text-gray-600 dark:text-gray-300 truncate max-w-[140px]">
                             {{ $log->usuario_nome ?? 'Sistema' }}
                         </div>
-                        @if(feature('auditoria.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('auditoria.visualizar')))
+                        @if($pode('administracao.auditoria.visualizar'))
                             <button wire:click="showQuickView({{ $log->id }})" class="p-1.5 text-gray-400 hover:text-gray-900 rounded transition-colors">
                                 <i class="text-base ph ph-info"></i>
                             </button>
